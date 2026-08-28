@@ -245,15 +245,16 @@ body {
   gap: 40px;
 }
 
-/* Arena Hero */
+/* Arena Hero / Username Area */
 .arena-hero {
   text-align: center;
-  max-width: 760px;
+  max-width: 600px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
+  gap: 0;
+  width: 100%;
 }
 
 .hero-badge {
@@ -310,14 +311,14 @@ body {
 /* Unique Username Section */
 .unique-user-card {
   width: 100%;
-  max-width: 520px;
+  max-width: 540px;
   background: var(--bg-card);
   backdrop-filter: blur(14px);
   border: 1px solid var(--border-glass);
-  padding: 16px 20px;
+  padding: 18px 22px;
   border-radius: var(--radius-md);
-  margin-top: 10px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  margin-top: 0;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 242, 255, 0.08);
 }
 
 .user-input-group {
