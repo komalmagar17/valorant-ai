@@ -38,8 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnSubmitLoadout = document.getElementById('btnSubmitLoadout');
   const btnClearAll = document.getElementById('btnClearAll');
   const btnQuickRandom = document.getElementById('btnQuickRandom');
-  const btnRefreshMatches = document.getElementById('btnRefreshMatches');
-  const matchesTableBody = document.getElementById('matchesTableBody');
 
   // 4 Box DOM Elements
   const boxAtk1 = document.getElementById('boxAtk1');
@@ -496,56 +494,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnCloseProcessingModal.addEventListener('click', () => {
     processingModal.classList.remove('active');
-    // Scroll down to the matches table
-    document.querySelector('.database-section').scrollIntoView({ behavior: 'smooth' });
   });
 
   btnSubmitLoadout.addEventListener('click', submitMatchLoadout);
-
-  // ==========================================================================
-  // SECTION 8: PERSISTENT DATABASE QUEUE TABLE
-  // ==========================================================================
-  async function loadDatabaseMatches() {
-    try {
-      const res = await fetch('/api/matches');
-      const data = await res.json();
-      const matches = data.matches || [];
-
-      if (matches.length === 0) {
-        matchesTableBody.innerHTML = `
-          <tr>
-            <td colspan="5" class="empty-table-msg">No match records yet. Submit a 4-card tactical loadout above to record your first match!</td>
-          </tr>
-        `;
-        return;
-      }
-
-      matchesTableBody.innerHTML = matches.slice(0, 15).map(m => {
-        const pA = m.player_a?.name || 'Player A';
-        const pB = m.player_b?.name || 'AI Opponent';
-        const status = m.status || 'processing';
-        const winner = m.evaluation?.winner_name || (status === 'completed' ? 'Resolved' : 'Adjudicating...');
-
-        return `
-          <tr>
-            <td><code>${m.match_id}</code></td>
-            <td>${m.created_at || 'Just now'}</td>
-            <td><strong style="color: #00f2ff;">${escapeHtml(pA)}</strong></td>
-            <td>${escapeHtml(pB)}</td>
-            <td>
-              <span class="status-badge ${status}">${status}</span>
-              ${status === 'completed' ? `<span style="margin-left: 8px; font-weight:700; color:#fff;">🏆 ${escapeHtml(winner)}</span>` : ''}
-            </td>
-          </tr>
-        `;
-      }).join('');
-
-    } catch (e) {
-      console.error('[ARENA ERROR] Failed to load matches:', e);
-    }
-  }
-
-  btnRefreshMatches.addEventListener('click', loadDatabaseMatches);
 
   // Helper Escape
   function escapeHtml(str) {
@@ -556,8 +507,5 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize
   fetchCardDatabase().then(() => {
     loadSavedUsername();
-    loadDatabaseMatches();
-    // Auto poll database every 8s
-    setInterval(loadDatabaseMatches, 8000);
   });
 });

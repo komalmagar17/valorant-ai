@@ -167,40 +167,6 @@
           <i data-lucide="send"></i> Submit Tactical Loadout
         </button>
       </div>
-    </section>
-
-    <!-- DATABASE QUEUE & RECENT MATCHES -->
-    <section class="database-section">
-      <div class="section-header">
-        <div>
-          <h2><i data-lucide="database"></i> Persistent Match Database</h2>
-          <p>Unique match records stored with player tags and AI evaluation scores.</p>
-        </div>
-        <button class="btn btn-secondary btn-sm" id="btnRefreshMatches">
-          <i data-lucide="refresh-cw"></i> Refresh
-        </button>
-      </div>
-
-      <div class="matches-table-container">
-        <table class="matches-table">
-          <thead>
-            <tr>
-              <th>Match ID</th>
-              <th>Created At</th>
-              <th>Agent (Player A)</th>
-              <th>Opponent</th>
-              <th>Status / Winner</th>
-            </tr>
-          </thead>
-          <tbody id="matchesTableBody">
-            <tr>
-              <td colspan="5" class="empty-table-msg">Loading database matches...</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
   </main>
 
   <!-- CARD SELECTION MODAL PICKER (OPENS ON TAPPING BLANK BOX) -->
@@ -271,7 +237,7 @@
         <div class="processing-footer">
           <span class="status-tip"><i data-lucide="check-circle-2"></i> Persisted in Database</span>
           <button class="btn btn-primary" id="btnCloseProcessingModal">
-            <i data-lucide="check"></i> View Live Match Record
+            <i data-lucide="check"></i> Draft Another Loadout
           </button>
         </div>
       </div>
