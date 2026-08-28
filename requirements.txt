@@ -1,0 +1,9 @@
+# ==============================================================================
+# REQUIREMENTS.TXT
+# ==============================================================================
+# 1. pydantic: Enforces data validation and JSON schemas at runtime.
+# 2. google-generativeai: Google Gemini SDK (Free tier available at aistudio.google.com)
+# ==============================================================================
+
+pydantic>=2.0.0
+google-generativeai>=0.8.0
