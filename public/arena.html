@@ -3,19 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tactix 3D — Tactical Card AI Arena</title>
-  <meta name="description" content="A cute 3D tactical card battle game powered by 3-AI strategy and evaluation engine. Draft 2 attack and 2 defence tactics.">
+  <title>Valorant Tactical Arena — 4-Card Selection</title>
+  <meta name="description" content="Draft 2 Attack and 2 Defence tactics for 3-AI combat adjudication.">
 
-  <!-- Google Fonts: Outfit & Plus Jakarta Sans -->
+  <!-- Google Fonts: Anton, Archivo Narrow, JetBrains Mono, Plus Jakarta Sans -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo+Narrow:ital,wght@0,400..700;1,400..700&family=JetBrains+Mono:wght@400..800&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-
-  <!-- Three.js for Cute 3D Mascot -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
   <!-- Canvas Confetti -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -24,39 +21,31 @@
 </head>
 <body>
 
-  <!-- Custom Lag Magnetic Cursor (Desktop only) -->
+  <!-- Custom Crosshair Cursor -->
   <div class="custom-cursor" id="customCursor"></div>
-  <div class="cursor-trail" id="cursorTrail"></div>
 
-  <!-- Background Ambient Mesh -->
-  <div class="ambient-glow glow-1"></div>
-  <div class="ambient-glow glow-2"></div>
-  <div class="ambient-glow glow-3"></div>
+  <!-- Atmospheric Background Glows -->
+  <div class="ambient-glow glow-cyan"></div>
+  <div class="ambient-glow glow-fire"></div>
 
-  <!-- Navigation Bar -->
+  <!-- Top Navigation Bar -->
   <header class="navbar">
     <div class="nav-container">
       <div class="logo">
-        <a href="index.html" class="logo-link" style="display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit;">
+        <a href="index.html" class="logo-link">
           <div class="logo-orb">
-            <i data-lucide="sparkles"></i>
+            <i data-lucide="crosshair"></i>
           </div>
-          <span class="logo-text">Tactix<span>3D</span></span>
+          <span class="logo-text">VALORANT<span>TACTIX</span></span>
         </a>
       </div>
 
-      <nav class="nav-links">
-        <a href="#deck-section" class="nav-item active"><i data-lucide="layers"></i> Tactical Deck</a>
-        <a href="#match-dock" class="nav-item"><i data-lucide="shield-alert"></i> 4-Card Dock</a>
-        <a href="#database-section" class="nav-item"><i data-lucide="database"></i> Database Queue</a>
-      </nav>
-
-      <div class="nav-action" style="display: flex; gap: 10px; align-items: center;">
-        <a href="index.html" class="btn btn-secondary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;" title="Return to Welcome Screen">
+      <div class="nav-actions">
+        <a href="index.html" class="btn btn-secondary btn-sm">
           <i data-lucide="arrow-left"></i> Briefing
         </a>
         <button class="btn btn-primary btn-sm" id="btnQuickRandom">
-          <i data-lucide="dices"></i> Random Pick
+          <i data-lucide="dices"></i> Random Loadout
         </button>
       </div>
     </div>
@@ -65,177 +54,142 @@
   <!-- Main Container -->
   <main class="main-wrapper">
 
-    <!-- HERO SECTION (Cute 3D Mascot + Introduction) -->
-    <section class="hero-section">
-      <div class="hero-content">
-        <div class="hero-badge">
-          <span class="pulse-dot"></span> 120 Dynamic Tactics &bull; 3-AI Referee Engine
-        </div>
-        <h1 class="hero-title">
-          Pick Your 4 Tactics.<br>
-          <span class="gradient-text">Let AI Adjudicate.</span>
-        </h1>
-        <p class="hero-subtitle">
-          Draft exactly <strong>2 Attack</strong> and <strong>2 Defence</strong> cards from our master tactical arsenal. 
-          Your choices are sent to the AI database for deep tactical simulation.
-        </p>
-
-        <div class="hero-stats">
-          <div class="stat-pill">
-            <i data-lucide="swords" class="icon-atk"></i>
-            <div>
-              <strong>60</strong>
-              <span>Attack Tactics</span>
-            </div>
-          </div>
-          <div class="stat-pill">
-            <i data-lucide="shield" class="icon-def"></i>
-            <div>
-              <strong>60</strong>
-              <span>Defence Tactics</span>
-            </div>
-          </div>
-          <div class="stat-pill">
-            <i data-lucide="cpu" class="icon-ai"></i>
-            <div>
-              <strong>3 AIs</strong>
-              <span>Tactical Pipeline</span>
-            </div>
-          </div>
-        </div>
+    <!-- PAGE HERO & USERNAME CONFIG -->
+    <section class="arena-hero">
+      <div class="hero-badge">
+        <span class="pulse-dot"></span> 120 Master Tactics &bull; 3-AI Referee Engine
       </div>
+      <h1 class="hero-title">
+        TACTICAL LOADOUT <span class="gradient-cyan">DRAFT</span>
+      </h1>
+      <p class="hero-subtitle">
+        Configure your unique Agent Tag, then tap each blank box below to choose <strong>2 Attack</strong> and <strong>2 Defence</strong> tactics from the 120-card database.
+      </p>
 
-      <!-- 3D Canvas Container for Boba-Bot Mascot -->
-      <div class="hero-3d-canvas-wrapper" id="canvasContainer">
-        <div class="canvas-glow"></div>
-        <div class="mascot-tag">
-          <span class="mascot-name">🤖 Boba-Bot</span>
-          <span class="mascot-status">Ready to Simulate</span>
+      <!-- Unique Username Input Section -->
+      <div class="unique-user-card">
+        <div class="user-input-group">
+          <div class="input-label-row">
+            <label for="uniqueUsernameInput">
+              <i data-lucide="user-check"></i> Unique Agent Username
+            </label>
+            <span class="unique-hint" id="userValidationMsg">✓ Ready to record</span>
+          </div>
+          <div class="input-field-wrap">
+            <input 
+              type="text" 
+              id="uniqueUsernameInput" 
+              placeholder="e.g. TenZ#NA1, JettGod, Radiant#7" 
+              maxlength="28" 
+              autocomplete="off"
+            />
+            <button class="btn btn-icon" id="btnRandomizeName" title="Generate random unique Agent Tag">
+              <i data-lucide="dices"></i>
+            </button>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- 4-CARD DRAFT DOCK (Fixed/Prominent Selection Bar) -->
-    <section class="draft-dock-section" id="match-dock">
-      <div class="dock-header">
-        <div class="dock-title-group">
-          <h2 class="dock-title"><i data-lucide="layout-grid"></i> Your 4-Card Tactical Loadout</h2>
-          <p class="dock-desc">Select <strong>2 Attack cards</strong> and <strong>2 Defence cards</strong> below to submit.</p>
-        </div>
-
-        <div class="dock-status-counters">
-          <span class="counter-badge" id="atkCounterBadge">
+    <!-- THE 4 BLANK BOXES SECTION (MAIN CARD SELECTION) -->
+    <section class="four-slots-section">
+      <div class="slots-header">
+        <h2><i data-lucide="layout-grid"></i> 4 Tactical Card Slots</h2>
+        <div class="slots-counter">
+          <span class="slot-counter-pill atk" id="atkCounterBadge">
             <i data-lucide="swords"></i> Attack: <strong id="atkCount">0/2</strong>
           </span>
-          <span class="counter-badge" id="defCounterBadge">
+          <span class="slot-counter-pill def" id="defCounterBadge">
             <i data-lucide="shield"></i> Defence: <strong id="defCount">0/2</strong>
           </span>
         </div>
       </div>
 
-      <div class="dock-slots-grid">
-        <!-- Slot 1: Attack 1 -->
-        <div class="dock-slot slot-attack" id="slotAtk1" data-slot="atk-1">
-          <div class="slot-placeholder">
-            <i data-lucide="swords"></i>
-            <span>Attack Card #1</span>
-            <small>Click any attack card below</small>
+      <!-- 4 Card Boxes Grid -->
+      <div class="four-boxes-grid">
+
+        <!-- BOX 1: Attack Card 1 -->
+        <div class="tactical-box slot-atk" id="boxAtk1" data-slot="atk-0" data-category="attack" data-index="1">
+          <div class="blank-box-state">
+            <div class="plus-icon-circle">
+              <i data-lucide="plus"></i>
+            </div>
+            <div class="blank-box-title">Attack Tactic #1</div>
+            <div class="blank-box-desc">Tap to select from 60 Attack Tactics</div>
+            <span class="slot-category-tag atk"><i data-lucide="swords"></i> Attack Slot</span>
           </div>
         </div>
 
-        <!-- Slot 2: Attack 2 -->
-        <div class="dock-slot slot-attack" id="slotAtk2" data-slot="atk-2">
-          <div class="slot-placeholder">
-            <i data-lucide="swords"></i>
-            <span>Attack Card #2</span>
-            <small>Click any attack card below</small>
+        <!-- BOX 2: Attack Card 2 -->
+        <div class="tactical-box slot-atk" id="boxAtk2" data-slot="atk-1" data-category="attack" data-index="2">
+          <div class="blank-box-state">
+            <div class="plus-icon-circle">
+              <i data-lucide="plus"></i>
+            </div>
+            <div class="blank-box-title">Attack Tactic #2</div>
+            <div class="blank-box-desc">Tap to select from 60 Attack Tactics</div>
+            <span class="slot-category-tag atk"><i data-lucide="swords"></i> Attack Slot</span>
           </div>
         </div>
 
-        <!-- Slot 3: Defence 1 -->
-        <div class="dock-slot slot-defence" id="slotDef1" data-slot="def-1">
-          <div class="slot-placeholder">
-            <i data-lucide="shield"></i>
-            <span>Defence Card #1</span>
-            <small>Click any defence card below</small>
+        <!-- BOX 3: Defence Card 1 -->
+        <div class="tactical-box slot-def" id="boxDef1" data-slot="def-0" data-category="defence" data-index="1">
+          <div class="blank-box-state">
+            <div class="plus-icon-circle">
+              <i data-lucide="plus"></i>
+            </div>
+            <div class="blank-box-title">Defence Tactic #1</div>
+            <div class="blank-box-desc">Tap to select from 60 Defence Tactics</div>
+            <span class="slot-category-tag def"><i data-lucide="shield"></i> Defence Slot</span>
           </div>
         </div>
 
-        <!-- Slot 4: Defence 2 -->
-        <div class="dock-slot slot-defence" id="slotDef2" data-slot="def-2">
-          <div class="slot-placeholder">
-            <i data-lucide="shield"></i>
-            <span>Defence Card #2</span>
-            <small>Click any defence card below</small>
+        <!-- BOX 4: Defence Card 2 -->
+        <div class="tactical-box slot-def" id="boxDef2" data-slot="def-1" data-category="defence" data-index="2">
+          <div class="blank-box-state">
+            <div class="plus-icon-circle">
+              <i data-lucide="plus"></i>
+            </div>
+            <div class="blank-box-title">Defence Tactic #2</div>
+            <div class="blank-box-desc">Tap to select from 60 Defence Tactics</div>
+            <span class="slot-category-tag def"><i data-lucide="shield"></i> Defence Slot</span>
           </div>
         </div>
+
       </div>
 
-      <!-- Dock Action Footer -->
-      <div class="dock-footer">
-        <div class="player-input-wrap">
-          <label for="playerNameInput"><i data-lucide="user"></i> Agent Name:</label>
-          <input type="text" id="playerNameInput" placeholder="Agent Alpha" value="Agent Alpha" maxlength="24">
-        </div>
-
-        <div class="dock-buttons">
-          <button class="btn btn-secondary" id="btnClearSelection">
-            <i data-lucide="rotate-ccw"></i> Clear
-          </button>
-          <button class="btn btn-primary btn-lg" id="btnSubmitMatch" disabled>
-            <i data-lucide="send"></i> Submit Tactical Strategy
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <!-- 120-CARD BROWSER & SELECTION DECK -->
-    <section class="card-browser-section" id="deck-section">
-      <div class="browser-controls">
-        <div class="category-tabs">
-          <button class="tab-btn active" data-tab="all">
-            <i data-lucide="sparkles"></i> All Tactics <span class="tab-count" id="countAll">120</span>
-          </button>
-          <button class="tab-btn" data-tab="attack">
-            <i data-lucide="swords"></i> Attack Tactics <span class="tab-count" id="countAtk">60</span>
-          </button>
-          <button class="tab-btn" data-tab="defence">
-            <i data-lucide="shield"></i> Defence Tactics <span class="tab-count" id="countDef">60</span>
-          </button>
-        </div>
-
-        <div class="search-wrap">
-          <i data-lucide="search" class="search-icon"></i>
-          <input type="text" id="cardSearchInput" placeholder="Search tactics by name or keywords...">
-        </div>
-      </div>
-
-      <!-- Grid of Cards -->
-      <div class="cards-grid" id="cardsGrid">
-        <!-- Rendered dynamically by app.js -->
-        <div class="loading-state">
-          <div class="cute-spinner"></div>
-          <p>Loading master tactical deck...</p>
-        </div>
+      <!-- Action Footer -->
+      <div class="slots-action-footer">
+        <button class="btn btn-secondary" id="btnClearAll">
+          <i data-lucide="rotate-ccw"></i> Clear All Slots
+        </button>
+        <button class="btn btn-primary btn-lg" id="btnSubmitLoadout" disabled>
+          <i data-lucide="send"></i> Submit Tactical Loadout
+        </button>
       </div>
     </section>
 
-    <!-- DATABASE SUBMISSION QUEUE SECTION -->
-    <section class="database-section" id="database-section">
+    <!-- DATABASE QUEUE & RECENT MATCHES -->
+    <section class="database-section">
       <div class="section-header">
-        <h2><i data-lucide="database"></i> Database Match Queue</h2>
-        <p>Real-time records of matches submitted to the tactical database.</p>
+        <div>
+          <h2><i data-lucide="database"></i> Persistent Match Database</h2>
+          <p>Unique match records stored with player tags and AI evaluation scores.</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnRefreshMatches">
+          <i data-lucide="refresh-cw"></i> Refresh
+        </button>
       </div>
 
       <div class="matches-table-container">
-        <table class="matches-table" id="matchesTable">
+        <table class="matches-table">
           <thead>
             <tr>
               <th>Match ID</th>
               <th>Created At</th>
-              <th>Player A</th>
+              <th>Agent (Player A)</th>
               <th>Opponent</th>
-              <th>Status</th>
+              <th>Status / Winner</th>
             </tr>
           </thead>
           <tbody id="matchesTableBody">
@@ -248,6 +202,44 @@
     </section>
 
   </main>
+
+  <!-- CARD SELECTION MODAL PICKER (OPENS ON TAPPING BLANK BOX) -->
+  <div class="modal-backdrop" id="cardPickerModal">
+    <div class="picker-modal-card">
+      
+      <!-- Modal Header -->
+      <div class="picker-header">
+        <div class="picker-title-group">
+          <h2 id="pickerModalTitle"><i data-lucide="layers"></i> Select Tactical Card</h2>
+          <p id="pickerModalSubtitle">Choose a tactic for this slot from the master database</p>
+        </div>
+        <button class="btn-close-modal" id="btnClosePickerModal">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <!-- Search & Filters -->
+      <div class="picker-filter-bar">
+        <div class="picker-search-wrap">
+          <i data-lucide="search" class="search-icon"></i>
+          <input type="text" id="pickerSearchInput" placeholder="Search tactics by name or keywords..." />
+        </div>
+        <div class="picker-category-pills">
+          <button class="picker-pill-btn active" data-filter="all">All</button>
+          <button class="picker-pill-btn" data-filter="attack">⚔️ Attack (60)</button>
+          <button class="picker-pill-btn" data-filter="defence">🛡️ Defence (60)</button>
+        </div>
+      </div>
+
+      <!-- Card Selection List Grid -->
+      <div class="picker-cards-grid" id="pickerCardsGrid">
+        <div class="loading-state">
+          <p>Loading tactical choices...</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
 
   <!-- "PROCESSING THE RESULT" CUTE OVERLAY MODAL -->
   <div class="modal-backdrop" id="processingModal">
@@ -268,22 +260,18 @@
         </div>
         <h2 class="processing-title">Processing the result...</h2>
         <p class="processing-desc">
-          Your 4 tactical cards have been securely saved to the database. The <strong>Attack AI</strong>, 
-          <strong>Defence AI</strong>, and <strong>Master Referee AI</strong> are analyzing your tactical clash.
+          Your 4 tactical cards and unique Agent Tag have been saved to the database. The <strong>Attack AI</strong>, 
+          <strong>Defence AI</strong>, and <strong>Referee Evaluation AI</strong> are analyzing the match.
         </p>
 
         <div class="submitted-loadout-summary" id="modalSubmittedSummary">
           <!-- Summary injected here -->
         </div>
 
-        <div class="processing-progress-bar">
-          <div class="progress-fill" id="progressFill"></div>
-        </div>
-
         <div class="processing-footer">
-          <span class="status-tip"><i data-lucide="check-circle-2"></i> Record Persisted in Database</span>
-          <button class="btn btn-secondary" id="btnCloseModal">
-            <i data-lucide="check"></i> Submit Another Deck
+          <span class="status-tip"><i data-lucide="check-circle-2"></i> Persisted in Database</span>
+          <button class="btn btn-primary" id="btnCloseProcessingModal">
+            <i data-lucide="check"></i> View Live Match Record
           </button>
         </div>
       </div>
@@ -291,7 +279,7 @@
   </div>
 
   <footer class="footer">
-    <p>&copy; 2026 Tactix 3D &bull; 120-Card Tactical AI Arena &bull; Pure Dynamic Input Engine</p>
+    <p>&copy; 2026 Valorant Tactical Arena &bull; 120-Card Pure Dynamic Input Engine</p>
   </footer>
 
   <script src="app.js"></script>

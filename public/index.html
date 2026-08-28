@@ -3,166 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VALORANT TACTICAL MASTERCLASS — LLM Combat Simulation</title>
-  <meta name="description" content="The first fully LLM-powered ability-vs-ability combat simulation. Draft 2 attack and 2 defence tactics and let AI adjudicate.">
+  <title>VALORANT TACTICAL MASTERCLASS</title>
+  <meta name="description" content="Valorant Tactical Masterclass — LLM-Powered Ability-vs-Ability Combat Simulation.">
 
-  <!-- Google Fonts: Anton, Archivo Narrow, JetBrains Mono -->
+  <!-- Google Fonts: Anton & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo+Narrow:ital,wght@0,400..700;1,400..700&family=JetBrains+Mono:wght@400..800&display=swap" rel="stylesheet">
-
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="welcome.css">
 </head>
 <body>
 
-  <!-- Custom Tactical Crosshair Cursor -->
-  <div class="tactical-cursor" id="tacticalCursor"></div>
+  <!-- 1. Pure Fullscreen Background Image -->
+  <div class="masterclass-fullscreen-bg"></div>
+  <div class="cinematic-vignette"></div>
 
-  <!-- Background Concept Artwork & Atmospheric Layers -->
-  <div class="masterclass-bg"></div>
-  <div class="bg-vignette"></div>
-  <div class="kinetic-scanlines"></div>
-  <canvas id="particleCanvas"></canvas>
-
-  <!-- Hyperspace Warp Overlay -->
-  <div class="warp-overlay" id="warpOverlay"></div>
-
-  <!-- Main UI Container -->
-  <div class="welcome-container">
-
-    <!-- Top Telemetry Bar -->
-    <header class="top-telemetry-bar">
-      <div class="telemetry-left">
-        <div class="telemetry-chip">
-          <span class="pulse-led"></span>
-          <i data-lucide="cloud"></i> SMOKE: 88%
-        </div>
-        <div class="telemetry-chip">
-          <i data-lucide="activity"></i> STATE: SIMULATION ACTIVE
-        </div>
-      </div>
-
-      <div class="brand-badge">
-        <span class="brand-logo-text">VALORANT <span>MASTERCLASS</span></span>
-      </div>
-
-      <div class="telemetry-right">
-        <div class="telemetry-chip fire">
-          <span class="pulse-led orange"></span>
-          <i data-lucide="flame"></i> FLAME: 94%
-        </div>
-        <div class="telemetry-chip">
-          <i data-lucide="cpu"></i> MASTER LLM: STANDBY
-        </div>
-      </div>
-    </header>
-
-    <!-- Center Stage Hero Content -->
-    <main class="hero-center-stage">
-      
-      <!-- Title & Subtitle -->
-      <div class="title-wrapper">
-        <h1 class="main-title">
-          WELCOME TO<br>
-          <span class="gradient-text">VALORANT TACTICAL</span> <span class="fire-text">MASTERCLASS</span>
-        </h1>
-      </div>
-
-      <div class="subtitle-badge">
-        <i data-lucide="zap"></i> THE FIRST FULLY LLM-POWERED ABILITY-VS-ABILITY COMBAT SIMULATION
-      </div>
-
-      <!-- Tactical Clash Bracket HUD -->
-      <div class="tactical-bracket-hud">
-        <div class="bracket-fighters">
-          
-          <!-- Agent Alpha (Left: Ice & Recon) -->
-          <div class="fighter-card alpha">
-            <div class="fighter-tag">AGENT ALPHA</div>
-            <div class="fighter-meta">
-              <span>LOADOUT: 2 ATK + 2 DEF</span>
-              <span class="status-active">> SYS_READY</span>
-            </div>
-          </div>
-
-          <!-- Central VS Energy Nexus -->
-          <div class="vs-nexus-core">
-            <div class="vs-line"></div>
-            <div class="vs-orb">VS</div>
-            <div class="vs-line"></div>
-          </div>
-
-          <!-- Agent Bravo (Right: Flame & Duelist) -->
-          <div class="fighter-card bravo">
-            <div class="fighter-tag">AGENT BRAVO</div>
-            <div class="fighter-meta">
-              <span>LOADOUT: 2 ATK + 2 DEF</span>
-              <span class="status-active fire">> SYS_READY</span>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Central Convergence Node -->
-        <div class="decision-node-wrapper">
-          <div class="decision-divider"></div>
-          <div class="master-llm-btn">
-            <i data-lucide="cpu"></i>
-            <span>3-AI Tactical Adjudication Engine</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Call to Action & Tap Prompt -->
-      <div class="cta-group">
-        <button class="btn-enter-arena" id="btnEnterArena">
-          <i data-lucide="crosshair"></i>
-          <span>Initialize Simulation // Enter Arena</span>
-        </button>
-
-        <div class="tap-anywhere-pill">
-          <i data-lucide="sparkles"></i> TAP ANYWHERE TO ENTER CARD SELECTION <i data-lucide="chevron-right"></i>
-        </div>
-      </div>
-
-    </main>
-
-    <!-- Bottom Telemetry Footer -->
-    <footer class="bottom-telemetry-footer">
-      <div class="footer-info">
-        <span class="online-dot"></span>
-        <span>SYSTEM ONLINE // v3.4.1.99</span>
-      </div>
-
-      <!-- Animated SVG Waveform Telemetry -->
-      <div class="waveform-wrap">
-        <svg viewBox="0 0 200 50" style="width: 100%; height: 100%;" xmlns="http://www.w3.org/2000/svg">
-          <path d="M10,25 Q30,5 50,25 T90,25 T130,25 T170,25 T190,25" fill="none" stroke="#00f2ff" stroke-width="2" opacity="0.9">
-            <animate attributeName="d" dur="2s" repeatCount="indefinite" values="
-              M10,25 Q30,5 50,25 T90,25 T130,25 T170,25 T190,25;
-              M10,25 Q30,45 50,25 T90,25 T130,25 T170,25 T190,25;
-              M10,25 Q30,5 50,25 T90,25 T130,25 T170,25 T190,25
-            "></animate>
-          </path>
-          <path d="M10,25 Q30,45 50,25 T90,25 T130,25 T170,25 T190,25" fill="none" stroke="#ff5e00" stroke-width="1.5" opacity="0.6">
-            <animate attributeName="d" dur="2s" repeatCount="indefinite" values="
-              M10,25 Q30,45 50,25 T90,25 T130,25 T170,25 T190,25;
-              M10,25 Q30,5 50,25 T90,25 T130,25 T170,25 T190,25;
-              M10,25 Q30,45 50,25 T90,25 T130,25 T170,25 T190,25
-            "></animate>
-          </path>
-        </svg>
-      </div>
-
-      <div class="footer-info">
-        <span>120 TACTICAL CARDS // SECURE DB QUEUE</span>
-      </div>
-    </footer>
-
+  <!-- 2. Single Animated Text moving from Bottom to Top -->
+  <div class="floating-hero-text">
+    <h1 class="hero-main-title">
+      VALORANT TACTICAL <span class="fire">MASTERCLASS</span>
+    </h1>
+    <div class="hero-prompt-subtext">
+      ⚡ TAP ANYWHERE TO ENTER ⚡
+    </div>
   </div>
+
+  <!-- 3. Screen Warp Transition on Tap -->
+  <div class="warp-transition-layer" id="warpLayer"></div>
 
   <script src="welcome.js"></script>
 </body>
