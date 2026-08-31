@@ -1461,13 +1461,242 @@
   gap: 6px;
 }
 
-.step-godot-tags code {
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 2px 6px;
+/* ==========================================================================
+   5. CLEAN MINIMAL ADMIN DASHBOARD STYLES
+   ========================================================================== */
+.clean-stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 10px;
+}
+
+.clean-stat-card {
+  background: rgba(15, 20, 30, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  backdrop-filter: blur(10px);
+}
+
+.clean-stat-card .stat-title {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.clean-stat-card .stat-value {
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  line-height: 1;
+  color: #fff;
+}
+
+.clean-stat-card .stat-value.cyan {
+  color: #00f2ff;
+  text-shadow: 0 0 15px rgba(0, 242, 255, 0.4);
+}
+
+.clean-stat-card .stat-value.purple {
+  color: #c084fc;
+  text-shadow: 0 0 15px rgba(192, 132, 252, 0.4);
+}
+
+.clean-stat-card .stat-value.red {
+  color: #ff4655;
+  text-shadow: 0 0 15px rgba(255, 70, 85, 0.4);
+}
+
+.panel-clean {
+  background: rgba(15, 20, 30, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 24px;
+  backdrop-filter: blur(10px);
+}
+
+.empty-state-row {
+  padding: 30px !important;
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+.card-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
   border-radius: 4px;
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: 0.78rem;
+}
+
+.card-pill.atk {
+  background: rgba(255, 94, 0, 0.12);
+  border: 1px solid rgba(255, 94, 0, 0.3);
+  color: #ff9040;
+}
+
+.card-pill.def {
+  background: rgba(0, 242, 255, 0.12);
+  border: 1px solid rgba(0, 242, 255, 0.3);
   color: #00f2ff;
 }
+
+.action-btn-group {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.row-selected-a td {
+  background: rgba(0, 242, 255, 0.08) !important;
+}
+
+.row-selected-b td {
+  background: rgba(255, 94, 0, 0.08) !important;
+}
+
+/* Matchup Slot Card */
+.matchup-preview-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .matchup-preview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.matchup-slot-card {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.matchup-slot-card.slot-a {
+  border-top: 3px solid #00f2ff;
+}
+
+.matchup-slot-card.slot-b {
+  border-top: 3px solid #ff5e00;
+}
+
+.slot-badge {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+}
+
+.slot-player-name {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  color: #fff;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.slot-cards-summary {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: #ddd;
+  min-height: 38px;
+}
+
+.slot-char-select {
+  margin-top: 6px;
+}
+
+.slot-char-select label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.matchup-vs {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  color: #ffd700;
+  text-align: center;
+  padding: 0 10px;
+}
+
+.outcome-controls-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .outcome-controls-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.scores-inputs-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.stat-pts-badge {
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  color: #c084fc;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+/* Godot Result Card */
+.godot-result-card {
+  background: rgba(0, 242, 255, 0.05);
+  border: 1px solid rgba(0, 242, 255, 0.3);
+  border-radius: 10px;
+  padding: 18px 20px;
+}
+
+.godot-result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.godot-success-pill {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  color: #22c55e;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.godot-result-actions {
+  display: flex;
+  gap: 8px;
+}
+
 
