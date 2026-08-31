@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Veer Survivor — Admin Command Center</title>
-  <meta name="description" content="Admin Tournament Command Center for 3-AI Combat Sequencing and API Key Management.">
+  <title>Veer Survivor — Admin Command Center & Godot Sequence Generator</title>
+  <meta name="description" content="Password-Protected Admin Command Center for Manual Match Adjudication, Godot Sequence Generation, and Character Emote Testing.">
 
   <!-- Google Fonts: Anton, JetBrains Mono, Plus Jakarta Sans -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -28,7 +28,51 @@
   <div class="ambient-glow glow-cyan"></div>
   <div class="ambient-glow glow-fire"></div>
 
-  <!-- Admin Navbar -->
+  <!-- ========================================================================= -->
+  <!-- 1. FULL-SCREEN SECURITY GATE OVERLAY (PASSWORD: K0lst@rno.1) -->
+  <!-- ========================================================================= -->
+  <div class="security-gate-overlay" id="securityGateOverlay">
+    <div class="security-gate-box">
+      <div class="gate-icon-orb">
+        <i data-lucide="lock" style="color: #ff4655;"></i>
+      </div>
+      <h2 class="gate-title">RESTRICTED ACCESS</h2>
+      <p class="gate-subtitle">CLASSIFIED ADMIN COMMAND TERMINAL</p>
+      
+      <form id="formGateAuth" class="gate-form">
+        <div class="gate-input-wrap">
+          <i data-lucide="key-round" class="gate-input-icon"></i>
+          <input 
+            type="password" 
+            id="gatePasswordInput" 
+            placeholder="Enter Admin Passcode..." 
+            autocomplete="current-password" 
+            autofocus 
+            required 
+          />
+          <button type="button" id="btnToggleGatePass" class="btn-toggle-vis" title="Toggle visibility">
+            <i data-lucide="eye"></i>
+          </button>
+        </div>
+
+        <div class="gate-hint">
+          <i data-lucide="shield-alert"></i> Required Passcode: <code>K0lst@rno.1</code>
+        </div>
+
+        <div class="gate-error" id="gateErrorMsg" style="display: none;">
+          ⚠️ Access Denied: Incorrect passcode.
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg btn-glow gate-submit-btn" id="btnGateUnlock">
+          <i data-lucide="unlock"></i> Authenticate & Enter Command Center
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 2. ADMIN NAVBAR -->
+  <!-- ========================================================================= -->
   <header class="navbar">
     <div class="nav-container">
       <div class="logo">
@@ -44,29 +88,31 @@
         <a href="arena.html" class="btn btn-secondary btn-sm">
           <i data-lucide="crosshair"></i> Player Arena
         </a>
-        <button class="btn btn-secondary btn-sm" id="btnAdminPasscode" title="Configure or update Admin Passcode">
-          <i data-lucide="key-round"></i> Admin Auth
+        <button class="btn btn-secondary btn-sm" id="btnLockAdmin" title="Lock Admin Session">
+          <i data-lucide="lock"></i> Lock Terminal
         </button>
         <button class="btn btn-primary btn-sm" id="btnRefreshAll">
           <i data-lucide="refresh-cw"></i> Refresh Roster
         </button>
       </div>
-
     </div>
   </header>
 
-  <main class="admin-wrapper">
+  <!-- ========================================================================= -->
+  <!-- 3. MAIN DASHBOARD -->
+  <!-- ========================================================================= -->
+  <main class="admin-wrapper" id="adminMainContent">
 
     <!-- HERO / STATUS METRICS -->
     <div class="admin-hero">
       <div class="admin-title-row">
         <div>
-          <h1 class="admin-heading">TOURNAMENT <span>MATCHMAKER</span></h1>
-          <p class="admin-subheading">Admin combat sequencing, deterministic matchmaking & 3-AI engine orchestration.</p>
+          <h1 class="admin-heading">TOURNAMENT <span>MATCHMAKER</span> & GODOT SEQUENCER</h1>
+          <p class="admin-subheading">100% Manual Match Adjudication • AI Godot Keyframe Sequencing • 2 Playable Characters with Full Emote Suite.</p>
         </div>
         <div class="admin-status-pill">
           <span class="pulse-dot"></span>
-          <span>System Online • Port 8000</span>
+          <span>Security Verified • Passcode Active</span>
         </div>
       </div>
 
@@ -94,91 +140,131 @@
           </div>
         </div>
         <div class="metric-card">
-          <div class="metric-icon yellow"><i data-lucide="key-round"></i></div>
+          <div class="metric-icon yellow"><i data-lucide="gamepad-2"></i></div>
           <div class="metric-data">
-            <span class="metric-num" id="statConfiguredKeys">3/3</span>
-            <span class="metric-lbl">AI Models Active</span>
+            <span class="metric-num">Godot 4.x</span>
+            <span class="metric-lbl">Engine Timeline Ready</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- GRID LAYOUT: CONFIG & QUEUE -->
+    <!-- ======================================================================= -->
+    <!-- SECTION A: 2 PLAYABLE CHARACTERS & INTERACTIVE EMOTE TEST STAGE -->
+    <!-- ======================================================================= -->
+    <section class="admin-panel panel-characters" style="margin-bottom: 24px;">
+      <div class="panel-header">
+        <div class="panel-title">
+          <i data-lucide="sparkles" class="icon-accent" style="color: #ffd700;"></i>
+          <h2>2 Playable Combat Characters & Full Emote Suite</h2>
+        </div>
+        <span class="panel-badge" style="background: rgba(255, 215, 0, 0.15); color: #ffd700; border-color: rgba(255, 215, 0, 0.3);">
+          Interactive Emote Testing
+        </span>
+      </div>
+      <p class="panel-hint">Test all combat animations and emote triggers for your local Godot game directly below. Click any emote to preview actions and audio cues.</p>
+
+      <div class="characters-showcase-grid">
+        
+        <!-- Character 1: PHANTOM-9 -->
+        <div class="character-card phantom-card">
+          <div class="char-header">
+            <div class="char-avatar-orb" style="border-color: #00f2ff; box-shadow: 0 0 15px rgba(0,242,255,0.3);">
+              <span>🗡️</span>
+            </div>
+            <div class="char-meta">
+              <span class="char-tagline" style="color: #00f2ff;">High-Speed Duelist</span>
+              <h3 class="char-name">PHANTOM-9</h3>
+              <p class="char-subtitle">The Cyber Infiltrator • Neon Cipher Daggers</p>
+            </div>
+          </div>
+
+          <!-- Live Emote Preview Box -->
+          <div class="emote-preview-stage" id="stagePhantom">
+            <div class="emote-visual-actor" id="visualActorPhantom">🗡️ PHANTOM-9 READY</div>
+            <div class="emote-speech-bubble" id="bubblePhantom">"Watch this entry frag."</div>
+          </div>
+
+          <!-- Emotes Grid -->
+          <div class="emotes-button-grid">
+            <button class="btn btn-emote" onclick="window.triggerCharEmote('char_phantom_9', 'emote_dance', 'Cyber Breakdance', '🕺 Dancing windmill combo!', 'sfx_synth_beat')">
+              🕺 Dance
+            </button>
+            <button class="btn btn-emote" onclick="window.triggerCharEmote('char_phantom_9', 'emote_taunt', 'Blade Spin', '🗡️ Blade spin: You are next.', 'sfx_blade_whoosh')">
+              🗡️ Taunt
+            </button>
+            <button class="btn btn-emote" onclick="window.triggerCharEmote('char_phantom_9', 'emote_celebrate', 'Holo-Trophy', '🎉 Hoisting neon champion cup!', 'sfx_victory_fanfare')">
+              🎉 Celebrate
+            </button>
+            <button class="btn btn-emote" onclick="window.triggerCharEmote('char_phantom_9', 'emote_flex', 'Blaster Flex', '💪 Charging cybernetic coils!', 'sfx_power_charge')">
+              💪 Flex
+            </button>
+            <button class="btn btn-emote" onclick="window.triggerCharEmote('char_phantom_9', 'emote_salute', 'Spec-Ops Salute', '🫡 Spec-Ops standing by.', 'sfx_holo_beep')">
+              🫡 Salute
+            </button>
+            <button class="btn btn-emote" onclick="window.triggerCharEmote('char_phantom_9', 'emote_gg', 'GG Wave', '👋 Good game, well played!', 'sfx_friendly_chime')">
+              👋 GG Wave
+            </button>
+            <button class="btn btn-emote" onclick="window.triggerCharEmote('char_phantom_9', 'emote_defeat', 'Disappointed', '🤦 Armor glitching... fall back.', 'sfx_glitch_down')">
+              🤦 Defeat
+            </button>
+          </div>
+        </div>
+
+        <!-- Character 2: SOL-VANGUARD -->
+        <div class="character-card vanguard-card">
+          <div class="char-header">
+            <div class="char-avatar-orb" style="border-color: #ff5e00; box-shadow: 0 0 15px rgba(255,94,0,0.3);">
+              <span>🛡️</span>
+            </div>
+            <div class="char-meta">
+              <span class="char-tagline" style="color: #ff5e00;">Heavy Sentinel</span>
+              <h3 class="char-name">SOL-VANGUARD</h3>
+              <p class="char-subtitle">The Molten Titan • Fortified Solar Alloy</p>
+            </div>
+          </div>
+
+          <!-- Live Emote Preview Box -->
+          <div class="emote-preview-stage" id="stageVanguard">
+            <div class="emote-visual-actor" id="visualActorVanguard">🛡️ SOL-VANGUARD READY</div>
+            <div class="emote-speech-bubble" id="bubbleVanguard">"None shall pass this perimeter."</div>
+          </div>
+
+          <!-- Emotes Grid -->
+          <div class="emotes-button-grid">
+            <button class="btn btn-emote" onclick="window.triggerCharEmote('char_sol_vanguard', 'emote_dance', 'Titan Robot', '🤖 Hydraulic servo robotic pop!', 'sfx_hydraulic_gear')">
+              🤖 Dance
+            </button>
+            <button class="btn btn-emote" onclick="window.triggerCharEmote('char_sol_vanguard', 'emote_taunt', 'Chest Thump', '🦍 Chest thump: Step forward if you dare!', 'sfx_titan_roar')">
+              🦍 Taunt
+            </button>
+            <button class="btn btn-emote" onclick="window.triggerCharEmote('char_sol_vanguard', 'emote_celebrate', 'Ground Slam', '🏆 Ground pound solar eruption!', 'sfx_molten_burst')">
+              🏆 Celebrate
+            </button>
+            <button class="btn btn-emote" onclick="window.triggerCharEmote('char_sol_vanguard', 'emote_flex', 'Molten Flex', '💥 Venting molten forge heat!', 'sfx_furnace_blast')">
+              💥 Flex
+            </button>
+            <button class="btn btn-emote" onclick="window.triggerCharEmote('char_sol_vanguard', 'emote_salute', 'Shield Tap', '🛡️ Honorable shield tap over heart.', 'sfx_shield_thump')">
+              🛡️ Salute
+            </button>
+            <button class="btn btn-emote" onclick="window.triggerCharEmote('char_sol_vanguard', 'emote_gg', 'Heavy Fist Bump', '👊 Titanium fist bump: Respect.', 'sfx_metal_impact')">
+              👊 GG Bump
+            </button>
+            <button class="btn btn-emote" onclick="window.triggerCharEmote('char_sol_vanguard', 'emote_defeat', 'Shield Knee Drop', '💔 Reactor overheating... dropping knee.', 'sfx_steam_release')">
+              💔 Defeat
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ======================================================================= -->
+    <!-- SECTION B: MANUAL MATCH ADJUDICATION & GODOT SEQUENCE GENERATOR -->
+    <!-- ======================================================================= -->
     <div class="admin-main-grid">
 
-      <!-- COLUMN 1: 3 UNIQUE AI API KEYS CONFIG -->
-      <section class="admin-panel panel-keys">
-        <div class="panel-header">
-          <div class="panel-title">
-            <i data-lucide="key" class="icon-accent"></i>
-            <h2>3 Unique AI API Keys</h2>
-          </div>
-          <span class="panel-badge">Google Gemini API</span>
-        </div>
-        <p class="panel-hint">Configure independent, dedicated API keys for each specialized AI role in the combat pipeline.</p>
-
-        <form id="formApiKeys" class="keys-form">
-          <!-- 1. Attack AI Key -->
-          <div class="key-field-group">
-            <div class="key-field-header">
-              <label for="inputAttackKey">
-                <span class="ai-role-tag atk">⚔️ Attack AI (LLM A)</span>
-              </label>
-              <span class="key-status-badge" id="badgeAttackKey">Checking...</span>
-            </div>
-            <div class="key-input-wrap">
-              <input type="password" id="inputAttackKey" placeholder="Enter GEMINI_API_KEY_ATTACK or leave blank for offline mock" />
-              <button type="button" class="btn-toggle-vis" data-target="inputAttackKey" title="Toggle visibility">
-                <i data-lucide="eye"></i>
-              </button>
-            </div>
-            <span class="key-helper" id="previewAttackKey">Loading key status...</span>
-          </div>
-
-          <!-- 2. Defence AI Key -->
-          <div class="key-field-group">
-            <div class="key-field-header">
-              <label for="inputDefenceKey">
-                <span class="ai-role-tag def">🛡️ Defence AI (LLM B)</span>
-              </label>
-              <span class="key-status-badge" id="badgeDefenceKey">Checking...</span>
-            </div>
-            <div class="key-input-wrap">
-              <input type="password" id="inputDefenceKey" placeholder="Enter GEMINI_API_KEY_DEFENCE or leave blank for offline mock" />
-              <button type="button" class="btn-toggle-vis" data-target="inputDefenceKey" title="Toggle visibility">
-                <i data-lucide="eye"></i>
-              </button>
-            </div>
-            <span class="key-helper" id="previewDefenceKey">Loading key status...</span>
-          </div>
-
-          <!-- 3. Master Referee Key -->
-          <div class="key-field-group">
-            <div class="key-field-header">
-              <label for="inputEvalKey">
-                <span class="ai-role-tag ref">⚖️ Master Referee (LLM C)</span>
-              </label>
-              <span class="key-status-badge" id="badgeEvalKey">Checking...</span>
-            </div>
-            <div class="key-input-wrap">
-              <input type="password" id="inputEvalKey" placeholder="Enter GEMINI_API_KEY_EVALUATION or leave blank for offline mock" />
-              <button type="button" class="btn-toggle-vis" data-target="inputEvalKey" title="Toggle visibility">
-                <i data-lucide="eye"></i>
-              </button>
-            </div>
-            <span class="key-helper" id="previewEvalKey">Loading key status...</span>
-          </div>
-
-          <div class="panel-action-bar">
-            <button type="submit" class="btn btn-primary" id="btnSaveKeys">
-              <i data-lucide="save"></i> Save & Apply 3 AI Keys
-            </button>
-            <span class="save-status-msg" id="keysSavedNotice"></span>
-          </div>
-        </form>
-      </section>
-
-      <!-- COLUMN 2: QUEUED PLAYERS ROSTER -->
+      <!-- COLUMN 1: QUEUED PLAYERS ROSTER -->
       <section class="admin-panel panel-queue">
         <div class="panel-header">
           <div class="panel-title">
@@ -191,7 +277,7 @@
             </button>
           </div>
         </div>
-        <p class="panel-hint">Players who submitted their 4 tactics from the web are queued here without triggering random bot fights.</p>
+        <p class="panel-hint">Select two real players below to load their 4-card tactics into the Manual Adjudication Console.</p>
 
         <!-- Matchmaking Selection Bar -->
         <div class="matchmaking-picker-bar">
@@ -210,16 +296,6 @@
           </div>
         </div>
 
-        <!-- Action Buttons -->
-        <div class="matchmaking-actions">
-          <button class="btn btn-primary btn-lg btn-glow" id="btnExecuteSelectedMatch" disabled>
-            <i data-lucide="swords"></i> Execute Selected 1v1 Match
-          </button>
-          <button class="btn btn-secondary btn-lg" id="btnExecuteSequence">
-            <i data-lucide="play-circle"></i> Run Sequenced Tournament
-          </button>
-        </div>
-
         <!-- Submissions Table / Cards List -->
         <div class="submissions-list-wrap" id="submissionsListContainer">
           <div class="empty-queue-msg">
@@ -229,215 +305,192 @@
         </div>
       </section>
 
+      <!-- COLUMN 2: MANUAL ADJUDICATION & AI GODOT TIMELINE CONTROLS -->
+      <section class="admin-panel panel-manual-adjudicate">
+        <div class="panel-header">
+          <div class="panel-title">
+            <i data-lucide="sliders" class="icon-accent" style="color: #ff4655;"></i>
+            <h2>Manual Adjudication & Godot Generator</h2>
+          </div>
+          <span class="panel-badge" style="background: rgba(255,70,85,0.15); color: #ff4655; border-color: rgba(255,70,85,0.3);">
+            No AI Predictions • 100% Manual
+          </span>
+        </div>
+        <p class="panel-hint">You decide the Winner, Scores, Characters, and Win Factors. The AI then compiles the complete Godot action sequence timeline.</p>
+
+        <form id="formManualAdjudicate" class="manual-adj-form">
+          
+          <!-- Character Pickers -->
+          <div class="adj-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="adj-field">
+              <label for="selectCharA">🗡️ Player A Character:</label>
+              <select id="selectCharA" class="admin-select">
+                <option value="char_phantom_9" selected>PHANTOM-9 (Speed Duelist)</option>
+                <option value="char_sol_vanguard">SOL-VANGUARD (Molten Titan)</option>
+              </select>
+            </div>
+            <div class="adj-field">
+              <label for="selectCharB">🛡️ Player B Character:</label>
+              <select id="selectCharB" class="admin-select">
+                <option value="char_sol_vanguard" selected>SOL-VANGUARD (Molten Titan)</option>
+                <option value="char_phantom_9">PHANTOM-9 (Speed Duelist)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Winner Selector -->
+          <div class="adj-field" style="margin-top: 12px;">
+            <label>🏆 Manual Winner Selection:</label>
+            <div class="winner-radio-group">
+              <label class="winner-radio-btn active" id="labelWinA">
+                <input type="radio" name="manualWinner" value="player_a" checked />
+                <span>Player A Wins</span>
+              </label>
+              <label class="winner-radio-btn" id="labelWinB">
+                <input type="radio" name="manualWinner" value="player_b" />
+                <span>Player B Wins</span>
+              </label>
+              <label class="winner-radio-btn" id="labelWinDraw">
+                <input type="radio" name="manualWinner" value="draw" />
+                <span>Draw / Tie</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Scores Row -->
+          <div class="adj-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px;">
+            <div class="adj-field">
+              <label for="inputScoreA">Player A Score (PTS):</label>
+              <input type="number" id="inputScoreA" class="admin-input-num" value="13" min="0" max="99" />
+            </div>
+            <div class="adj-field">
+              <label for="inputScoreB">Player B Score (PTS):</label>
+              <input type="number" id="inputScoreB" class="admin-input-num" value="9" min="0" max="99" />
+            </div>
+          </div>
+
+          <!-- Win Reason & MVP Combo -->
+          <div class="adj-field" style="margin-top: 12px;">
+            <label for="inputWinReason">🎯 Win Reason / Match Decider:</label>
+            <input type="text" id="inputWinReason" class="admin-input-text" placeholder="e.g. Site A Entry Flank, Retake Defuse Clutch, Sniper Headshot" value="Flank Infiltration & decisive tactical utility rotation." />
+          </div>
+
+          <div class="adj-field" style="margin-top: 12px;">
+            <label for="inputMvpCombo">⭐ MVP Tactical Combo:</label>
+            <input type="text" id="inputMvpCombo" class="admin-input-text" placeholder="e.g. Quick Peek + Flash Entry" value="Quick Peek + Flash Entry" />
+          </div>
+
+          <!-- Submit Button -->
+          <div class="adj-actions" style="margin-top: 18px;">
+            <button type="submit" class="btn btn-primary btn-lg btn-glow" id="btnRunManualAdj" style="width: 100%;">
+              <i data-lucide="play"></i> Generate AI Godot Combat Sequence & Record Match
+            </button>
+          </div>
+
+        </form>
+      </section>
+
     </div>
 
-    <!-- LIVE AI COMBAT EXECUTION & COMMENTARY RESULTS SECTION -->
-    <section class="admin-panel panel-results" id="liveCombatSection">
+    <!-- ======================================================================= -->
+    <!-- SECTION C: GODOT COMBAT TIMELINE & JSON EXPORTER -->
+    <!-- ======================================================================= -->
+    <section class="admin-panel panel-godot-export" id="godotExportSection" style="margin-top: 24px;">
       <div class="panel-header">
         <div class="panel-title">
-          <i data-lucide="activity" class="icon-accent"></i>
-          <h2>Combat Adjudication & Live Broadcast</h2>
+          <i data-lucide="gamepad-2" class="icon-accent" style="color: #00f2ff;"></i>
+          <h2>Godot Engine Combat Sequence Timeline</h2>
         </div>
-        <span class="panel-badge live" id="combatStatusBadge">Idle / Ready</span>
-      </div>
-
-      <!-- Stepper Progress Display -->
-      <div class="ai-stepper" id="aiStepper">
-        <div class="step-item" id="step1">
-          <div class="step-node">1</div>
-          <div class="step-label">⚔️ Attack AI Plans</div>
-        </div>
-        <div class="step-connector"></div>
-        <div class="step-item" id="step2">
-          <div class="step-node">2</div>
-          <div class="step-label">🛡️ Defence AI Setups</div>
-        </div>
-        <div class="step-connector"></div>
-        <div class="step-item" id="step3">
-          <div class="step-node">3</div>
-          <div class="step-label">⚖️ Master Referee Verdict</div>
+        <div class="panel-header-actions">
+          <button class="btn btn-secondary btn-sm" id="btnCopyGodotJson">
+            <i data-lucide="copy"></i> Copy Godot JSON
+          </button>
+          <button class="btn btn-primary btn-sm" id="btnDownloadGodotJson">
+            <i data-lucide="download"></i> Download godot_match_sequence.json
+          </button>
         </div>
       </div>
+      <p class="panel-hint">Below is the complete keyframe timeline for Godot 4.x / 3.x AnimationPlayer. Drop into your local Godot scene to play the exact sequence!</p>
 
-      <!-- Match Result Display -->
-      <div class="match-result-view" id="matchResultView" style="display:none;">
-        
-        <!-- Winner Banner -->
-        <div class="winner-banner">
-          <div class="trophy-orb"><i data-lucide="trophy"></i></div>
-          <div class="winner-info">
-            <span class="winner-tagline">ROUND WINNER DECLARED</span>
-            <h2 class="winner-name-text" id="resWinnerName">Champion</h2>
-            <p class="winner-reason-text" id="resWinReason">Dominant tactical execution.</p>
-          </div>
-          <div class="mvp-combo-pill">
-            <span class="pill-label">MVP TACTICAL COMBO</span>
-            <strong class="pill-val" id="resMvpCombo">Quick Peek + Flash Entry</strong>
-          </div>
+      <!-- Godot Timeline Visual List -->
+      <div class="godot-timeline-container" id="godotTimelineList">
+        <div style="padding: 30px; text-align: center; color: var(--text-muted);">
+          <i data-lucide="film" style="font-size: 2rem; margin-bottom: 8px; opacity: 0.5;"></i>
+          <p>No sequence generated yet. Adjudicate a match above to generate the Godot timeline.</p>
         </div>
-
-        <!-- Head-to-Head Scores -->
-        <div class="scores-comparison-grid">
-          
-          <!-- Player A Card -->
-          <div class="score-card side-a">
-            <div class="score-card-header">
-              <span class="player-role">Player A</span>
-              <h3 id="resPlayerAName">Player A</h3>
-            </div>
-            <div class="score-number-big" id="resScoreA">0</div>
-            <div class="synergy-bar-wrap">
-              <div class="synergy-bar-label">
-                <span>Tactical Synergy</span>
-                <span id="resSynergyValA">0%</span>
-              </div>
-              <div class="synergy-progress">
-                <div class="synergy-fill" id="resSynergyFillA" style="width:0%"></div>
-              </div>
-            </div>
-            <div class="loadout-mini-tags" id="resLoadoutA"></div>
-          </div>
-
-          <!-- Score VS Center Badge -->
-          <div class="score-vs-center">
-            <span>FINAL</span>
-            <div class="vs-text">VS</div>
-            <span>SCORE</span>
-          </div>
-
-          <!-- Player B Card -->
-          <div class="score-card side-b">
-            <div class="score-card-header">
-              <span class="player-role">Player B</span>
-              <h3 id="resPlayerBName">Player B</h3>
-            </div>
-            <div class="score-number-big" id="resScoreB">0</div>
-            <div class="synergy-bar-wrap">
-              <div class="synergy-bar-label">
-                <span>Tactical Synergy</span>
-                <span id="resSynergyValB">0%</span>
-              </div>
-              <div class="synergy-progress">
-                <div class="synergy-fill" id="resSynergyFillB" style="width:0%"></div>
-              </div>
-            </div>
-            <div class="loadout-mini-tags" id="resLoadoutB"></div>
-          </div>
-
-        </div>
-
-        <!-- Tactical Sequences Grid (AI Generated Sequence Breakdown) -->
-        <div class="sequences-split-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom: 20px;">
-          
-          <!-- Player A Sequences -->
-          <div class="details-box" style="background: rgba(255, 94, 0, 0.05); border: 1px solid rgba(255, 94, 0, 0.2);">
-            <div class="details-box-title" style="color: #ff5e00;">
-              <i data-lucide="swords"></i> <span id="resSeqTitleA">Player A AI Sequence</span>
-            </div>
-            <div id="resSequenceListA" style="font-family: var(--font-mono); font-size: 0.85rem; display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
-              <!-- Sequence injected here -->
-            </div>
-          </div>
-
-          <!-- Player B Sequences -->
-          <div class="details-box" style="background: rgba(0, 242, 255, 0.05); border: 1px solid rgba(0, 242, 255, 0.2);">
-            <div class="details-box-title" style="color: #00f2ff;">
-              <i data-lucide="shield"></i> <span id="resSeqTitleB">Player B AI Sequence</span>
-            </div>
-            <div id="resSequenceListB" style="font-family: var(--font-mono); font-size: 0.85rem; display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
-              <!-- Sequence injected here -->
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Broadcast Commentary & Combat Logs Grid -->
-        <div class="details-split-grid">
-          
-          <!-- Esports Commentary Box -->
-          <div class="details-box">
-            <div class="details-box-title">
-              <i data-lucide="radio"></i> Esports Live Commentary
-            </div>
-            <div class="commentary-scroll" id="resCommentaryText">
-              No commentary generated.
-            </div>
-          </div>
-
-          <!-- Referee Combat Log -->
-          <div class="details-box">
-            <div class="details-box-title">
-              <i data-lucide="scroll-text"></i> Master Referee Combat Log
-            </div>
-            <div class="combat-log-scroll" id="resCombatLogs">
-              <!-- Logs injected here -->
-            </div>
-          </div>
-
-        </div>
-
       </div>
 
+      <!-- Copyable Raw JSON Box -->
+      <details class="godot-json-details" style="margin-top: 16px;">
+        <summary style="cursor: pointer; color: #00f2ff; font-family: var(--font-mono); font-size: 0.85rem;">
+          ▶ View Raw Godot JSON Payload
+        </summary>
+        <pre class="godot-raw-json" id="godotRawJsonDisplay" style="margin-top: 8px; padding: 16px; background: rgba(0,0,0,0.5); border-radius: 6px; font-family: var(--font-mono); font-size: 0.8rem; overflow-x: auto; max-height: 350px;">// Raw JSON will be output here...</pre>
+      </details>
     </section>
 
-    <!-- SECTION 4: DEDICATED PLAYER DATABASE & LEADERBOARD -->
-    <section class="admin-panel panel-players" style="margin-bottom: 30px;">
+    <!-- ======================================================================= -->
+    <!-- SECTION D: DEDICATED PLAYERS LEADERBOARD -->
+    <!-- ======================================================================= -->
+    <section class="admin-panel panel-players" style="margin-top: 24px;">
       <div class="panel-header">
         <div class="panel-title">
-          <i data-lucide="award" class="icon-accent" style="color: #c084fc;"></i>
-          <h2>Player Database & Leaderboard</h2>
+          <i data-lucide="users" class="icon-accent"></i>
+          <h2>Registered Agent Roster & Leaderboard (<span id="playerCountBadge">0 Players</span>)</h2>
         </div>
-        <span class="panel-badge" id="playerCountBadge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border-color: rgba(168, 85, 247, 0.3);">0 Players</span>
       </div>
-
       <div class="table-responsive">
         <table class="admin-table">
           <thead>
             <tr>
               <th>Rank</th>
-              <th>Agent Tag</th>
+              <th>Agent Username</th>
               <th>Matches</th>
-              <th>Record (W/L/D)</th>
+              <th>W / L / D</th>
               <th>Win Rate</th>
-              <th>Total Score</th>
+              <th>Score Points</th>
               <th>Last Active</th>
             </tr>
           </thead>
           <tbody id="playersTableBody">
             <tr>
-              <td colspan="7" class="text-center">Loading registered players...</td>
+              <td colspan="7" class="text-center" style="padding: 24px; color: var(--text-muted);">
+                Loading players database...
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
     </section>
 
-    <!-- SECTION 5: MATCHES DATABASE ARCHIVE -->
-    <section class="admin-panel panel-history">
+    <!-- ======================================================================= -->
+    <!-- SECTION E: MATCHES HISTORY ARCHIVE -->
+    <!-- ======================================================================= -->
+    <section class="admin-panel panel-history" style="margin-top: 24px;">
       <div class="panel-header">
         <div class="panel-title">
-          <i data-lucide="archive" class="icon-accent"></i>
-          <h2>Matches Database Records</h2>
+          <i data-lucide="history" class="icon-accent"></i>
+          <h2>Matches History Archive (<span id="historyCountBadge">0 Records</span>)</h2>
         </div>
-        <span class="panel-badge" id="historyCountBadge">0 Records</span>
       </div>
-
       <div class="table-responsive">
         <table class="admin-table">
           <thead>
             <tr>
               <th>Match ID</th>
-              <th>Timestamp</th>
+              <th>Date / Time</th>
               <th>Player A</th>
               <th>Player B</th>
               <th>Winner</th>
               <th>Score</th>
-              <th>Actions</th>
+              <th>Godot Export</th>
             </tr>
           </thead>
           <tbody id="matchesTableBody">
             <tr>
-              <td colspan="7" class="text-center">Loading match history...</td>
+              <td colspan="7" class="text-center" style="padding: 24px; color: var(--text-muted);">
+                Loading matches history...
+              </td>
             </tr>
           </tbody>
         </table>
@@ -446,27 +499,21 @@
 
   </main>
 
-  <!-- MATCH DETAIL MODAL -->
-  <div class="modal-backdrop" id="matchDetailModal">
-    <div class="picker-modal-card match-modal-lg">
-      <div class="picker-header">
-        <div class="picker-title-group">
-          <h2 id="modalMatchTitle"><i data-lucide="file-text"></i> Match Archive Details</h2>
-          <p id="modalMatchSub">Evaluating round breakdowns</p>
+  <!-- Match Detail Modal -->
+  <div class="match-detail-modal" id="matchDetailModal">
+    <div class="match-detail-box">
+      <div class="modal-header">
+        <div>
+          <h2 id="modalMatchTitle">Match Details</h2>
+          <span class="modal-sub" id="modalMatchSub">ID: ...</span>
         </div>
-        <button class="btn-close-modal" id="btnCloseMatchModal">
-          <i data-lucide="x"></i>
-        </button>
+        <button class="btn-close-modal" id="btnCloseMatchModal"><i data-lucide="x"></i></button>
       </div>
-      <div class="modal-body-scroll" id="modalMatchContent">
-        <!-- Content injected here -->
+      <div class="modal-body" id="modalMatchContent">
+        <!-- Injected dynamically -->
       </div>
     </div>
   </div>
-
-  <footer class="footer">
-    <p>&copy; 2026 Veer Survivor &bull; Multi-Agent AI Tournament Orchestration &bull; 120-Card Engine</p>
-  </footer>
 
   <script src="admin.js"></script>
 </body>

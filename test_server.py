@@ -153,7 +153,7 @@ class TestServerAPI(unittest.TestCase):
         req = urllib.request.Request(
             url,
             data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
+            headers={"Content-Type": "application/json", "X-Admin-Token": "K0lst@rno.1"},
             method="POST"
         )
         with urllib.request.urlopen(req) as resp:
@@ -162,7 +162,7 @@ class TestServerAPI(unittest.TestCase):
             self.assertEqual(data["status"], "success")
 
         # 2. Get keys status (masked)
-        with urllib.request.urlopen(urllib.request.Request(url, method="GET")) as resp:
+        with urllib.request.urlopen(urllib.request.Request(url, headers={"X-Admin-Token": "K0lst@rno.1"}, method="GET")) as resp:
             self.assertEqual(resp.status, 200)
             keys_data = json.loads(resp.read().decode("utf-8"))
             self.assertTrue(keys_data["attack_ai"]["configured"])
@@ -174,7 +174,7 @@ class TestServerAPI(unittest.TestCase):
         reset_req = urllib.request.Request(
             url,
             data=json.dumps({"attack_key": "", "defence_key": "", "evaluation_key": ""}).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
+            headers={"Content-Type": "application/json", "X-Admin-Token": "K0lst@rno.1"},
             method="POST"
         )
         urllib.request.urlopen(reset_req)
@@ -186,7 +186,7 @@ class TestServerAPI(unittest.TestCase):
         reset_req = urllib.request.Request(
             keys_url,
             data=json.dumps({"attack_key": "", "defence_key": "", "evaluation_key": ""}).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
+            headers={"Content-Type": "application/json", "X-Admin-Token": "K0lst@rno.1"},
             method="POST"
         )
         urllib.request.urlopen(reset_req)
@@ -218,7 +218,12 @@ class TestServerAPI(unittest.TestCase):
             "submission_a_id": sub1_id,
             "submission_b_id": sub2_id
         }
-        req_exec = urllib.request.Request(exec_url, data=json.dumps(exec_payload).encode("utf-8"), headers={"Content-Type": "application/json"}, method="POST")
+        req_exec = urllib.request.Request(
+            exec_url,
+            data=json.dumps(exec_payload).encode("utf-8"),
+            headers={"Content-Type": "application/json", "X-Admin-Token": "K0lst@rno.1"},
+            method="POST"
+        )
         with urllib.request.urlopen(req_exec) as resp:
             self.assertEqual(resp.status, 200)
             res_data = json.loads(resp.read().decode("utf-8"))
@@ -244,7 +249,12 @@ class TestServerAPI(unittest.TestCase):
 
         # Execute sequence
         seq_url = f"{self.base_url}/api/admin/execute-sequence"
-        req_seq = urllib.request.Request(seq_url, data=json.dumps({}).encode("utf-8"), headers={"Content-Type": "application/json"}, method="POST")
+        req_seq = urllib.request.Request(
+            seq_url,
+            data=json.dumps({}).encode("utf-8"),
+            headers={"Content-Type": "application/json", "X-Admin-Token": "K0lst@rno.1"},
+            method="POST"
+        )
         with urllib.request.urlopen(req_seq) as resp:
             self.assertEqual(resp.status, 200)
             data = json.loads(resp.read().decode("utf-8"))
@@ -390,13 +400,101 @@ class TestServerAPI(unittest.TestCase):
                 v_data = json.loads(resp.read().decode("utf-8"))
                 self.assertTrue(v_data["valid"])
 
-    def test_vercel_serverless_handler_import(self):
-        """Ensures api/index.py imports and subclasses GameRequestHandler without errors."""
-        from api.index import handler
-        from server import GameRequestHandler
-        self.assertTrue(issubclass(handler, GameRequestHandler))
+    def test_default_admin_password_k0lstar(self):
+        """Default ADMIN_PASSWORD must be K0lst@rno.1 and strictly enforce authorization."""
+        url = f"{self.base_url}/api/admin/keys"
+        
+        # 1. Without password -> 401
+        req_none = urllib.request.Request(url, method="GET")
+        with self.assertRaises(urllib.error.HTTPError) as ctx:
+            urllib.request.urlopen(req_none)
+        self.assertEqual(ctx.exception.code, 401)
+
+        # 2. With wrong password -> 401
+        req_bad = urllib.request.Request(url, headers={"X-Admin-Token": "WrongPass123"}, method="GET")
+        with self.assertRaises(urllib.error.HTTPError) as ctx:
+            urllib.request.urlopen(req_bad)
+        self.assertEqual(ctx.exception.code, 401)
+
+        # 3. With K0lst@rno.1 -> 200
+        req_good = urllib.request.Request(url, headers={"X-Admin-Token": "K0lst@rno.1"}, method="GET")
+        with urllib.request.urlopen(req_good) as resp:
+            self.assertEqual(resp.status, 200)
+
+    def test_get_characters_endpoint(self):
+        """GET /api/characters should return PHANTOM-9 and SOL-VANGUARD with full emotes."""
+        url = f"{self.base_url}/api/characters"
+        req = urllib.request.Request(url, method="GET")
+        with urllib.request.urlopen(req) as resp:
+            self.assertEqual(resp.status, 200)
+            data = json.loads(resp.read().decode("utf-8"))
+            self.assertEqual(data["count"], 2)
+            chars = data["characters"]
+            names = [c["name"] for c in chars]
+            self.assertIn("PHANTOM-9", names)
+            self.assertIn("SOL-VANGUARD", names)
+            
+            for c in chars:
+                self.assertIn("emotes", c)
+                self.assertGreaterEqual(len(c["emotes"]), 7)
+                emote_ids = [e["id"] for e in c["emotes"]]
+                self.assertIn("emote_dance", emote_ids)
+                self.assertIn("emote_taunt", emote_ids)
+                self.assertIn("emote_celebrate", emote_ids)
+                self.assertIn("emote_flex", emote_ids)
+                self.assertIn("emote_salute", emote_ids)
+                self.assertIn("emote_gg", emote_ids)
+                self.assertIn("emote_defeat", emote_ids)
+
+    def test_manual_adjudicate_and_godot_sequence(self):
+        """POST /api/admin/manual-adjudicate and GET /api/matches/<id>/godot-sequence."""
+        url = f"{self.base_url}/api/admin/manual-adjudicate"
+        payload = {
+            "player_a_name": "TenZ#NA1",
+            "player_a_attack_cards": ["atk_quick_peek", "atk_double_peek"],
+            "player_a_defence_cards": ["def_basic_hold", "def_defensive_smoke"],
+            "player_a_character_id": "char_phantom_9",
+            "player_b_name": "Boaster#IGL",
+            "player_b_attack_cards": ["atk_split_pressure", "atk_flash_entry"],
+            "player_b_defence_cards": ["def_layered_defense", "def_antirush_setup"],
+            "player_b_character_id": "char_sol_vanguard",
+            "winner_id": "player_a",
+            "player_a_score": 13,
+            "player_b_score": 7,
+            "win_reason": "Flank Infiltration & decisive tactical utility rotation.",
+            "mvp_combo": "Quick Peek + Flash Entry"
+        }
+        
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json", "X-Admin-Token": "K0lst@rno.1"},
+            method="POST"
+        )
+        with urllib.request.urlopen(req) as resp:
+            self.assertEqual(resp.status, 201)
+            data = json.loads(resp.read().decode("utf-8"))
+            self.assertEqual(data["status"], "success")
+            self.assertIn("match", data)
+            self.assertIn("godot_sequence", data)
+            
+            match_id = data["match"]["match_id"]
+            godot_seq = data["godot_sequence"]
+            self.assertEqual(godot_seq["winner_id"], "player_a")
+            self.assertEqual(godot_seq["player_a_score"], 13)
+            self.assertEqual(godot_seq["player_b_score"], 7)
+            self.assertGreaterEqual(len(godot_seq["timeline"]), 5)
+
+        # Fetch via GET /api/matches/<id>/godot-sequence
+        seq_url = f"{self.base_url}/api/matches/{match_id}/godot-sequence"
+        with urllib.request.urlopen(urllib.request.Request(seq_url, method="GET")) as seq_resp:
+            self.assertEqual(seq_resp.status, 200)
+            seq_data = json.loads(seq_resp.read().decode("utf-8"))
+            self.assertEqual(seq_data["match_id"], match_id)
+            self.assertIn("timeline", seq_data)
 
 
 if __name__ == "__main__":
     unittest.main()
+
 

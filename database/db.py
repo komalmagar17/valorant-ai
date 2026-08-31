@@ -369,6 +369,10 @@ def update_match_result(match_id: str, evaluation_data: Dict[str, Any]) -> bool:
         winner_name = evaluation_data.get("winner_name") if isinstance(evaluation_data, dict) else None
         p_a_score = evaluation_data.get("player_a_score") if isinstance(evaluation_data, dict) else None
         p_b_score = evaluation_data.get("player_b_score") if isinstance(evaluation_data, dict) else None
+        if isinstance(p_a_score, dict):
+            p_a_score = p_a_score.get("total_score")
+        if isinstance(p_b_score, dict):
+            p_b_score = p_b_score.get("total_score")
 
         with conn:
             cursor = conn.execute("""

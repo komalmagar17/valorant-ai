@@ -254,6 +254,233 @@ def run_1v1_match(
 
 
 # ==============================================================================
+# SECTION 3B: GODOT COMBAT TIMELINE & ACTION SEQUENCE GENERATOR
+# ==============================================================================
+
+def generate_godot_match_sequence(
+    match_id: str,
+    player_a_name: str,
+    player_a_attack_cards: List[str],
+    player_a_defence_cards: List[str],
+    player_a_character_id: str,
+    player_b_name: str,
+    player_b_attack_cards: List[str],
+    player_b_defence_cards: List[str],
+    player_b_character_id: str,
+    winner_id: str,  # "player_a", "player_b", or "draw"
+    player_a_score: int = 13,
+    player_b_score: int = 9,
+    win_reason: str = "Superior ability rotation and tactical execution.",
+    mvp_combo: Optional[str] = None,
+    api_key: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Generates a high-precision, chronological Godot animation and emote sequence
+    based on manual admin adjudication and 4-card player loadouts.
+    """
+    from data.cards import get_all_cards
+    from data.characters import get_character_by_id
+    import os
+
+    all_cards = get_all_cards()
+    char_a = get_character_by_id(player_a_character_id or "char_phantom_9")
+    char_b = get_character_by_id(player_b_character_id or "char_sol_vanguard")
+
+    winner_name = player_a_name if winner_id == "player_a" else (player_b_name if winner_id == "player_b" else "Tie / Draw")
+    loser_name = player_b_name if winner_id == "player_a" else (player_a_name if winner_id == "player_b" else "Both Agents")
+    winner_actor = winner_id if winner_id in ["player_a", "player_b"] else "player_a"
+    loser_actor = "player_b" if winner_actor == "player_a" else "player_a"
+
+    # Resolve card names
+    p_a_atks = [all_cards.get(cid, {"name": cid, "id": cid}) for cid in player_a_attack_cards]
+    p_a_defs = [all_cards.get(cid, {"name": cid, "id": cid}) for cid in player_a_defence_cards]
+    p_b_atks = [all_cards.get(cid, {"name": cid, "id": cid}) for cid in player_b_attack_cards]
+    p_b_defs = [all_cards.get(cid, {"name": cid, "id": cid}) for cid in player_b_defence_cards]
+
+    auto_mvp = mvp_combo or (f"{p_a_atks[0]['name']} + {p_a_defs[0]['name']}" if winner_id == "player_a" else f"{p_b_atks[0]['name']} + {p_b_defs[0]['name']}")
+
+    # Build chronological Godot timeline keyframes
+    timeline: List[Dict[str, Any]] = [
+        {
+            "step": 1,
+            "timestamp_sec": 0.0,
+            "actor": "player_a",
+            "character_id": char_a["id"],
+            "character_name": char_a["name"],
+            "action_type": "round_start_emote",
+            "card_id": None,
+            "card_name": None,
+            "animation_trigger": "anim_emote_taunt" if char_a["id"] == "char_phantom_9" else "anim_emote_flex",
+            "emote_trigger": "emote_taunt" if char_a["id"] == "char_phantom_9" else "emote_flex",
+            "damage_dealt": 0,
+            "target": "player_b",
+            "sound_cue": "sfx_blade_whoosh" if char_a["id"] == "char_phantom_9" else "sfx_furnace_blast",
+            "commentary": f"Round starts! {player_a_name} ({char_a['name']}) opens with an aggressive tactical taunt."
+        },
+        {
+            "step": 2,
+            "timestamp_sec": 1.4,
+            "actor": "player_b",
+            "character_id": char_b["id"],
+            "character_name": char_b["name"],
+            "action_type": "round_start_emote",
+            "card_id": None,
+            "card_name": None,
+            "animation_trigger": "anim_emote_flex" if char_b["id"] == "char_sol_vanguard" else "anim_emote_dance",
+            "emote_trigger": "emote_flex" if char_b["id"] == "char_sol_vanguard" else "emote_dance",
+            "damage_dealt": 0,
+            "target": "player_a",
+            "sound_cue": "sfx_power_charge",
+            "commentary": f"{player_b_name} ({char_b['name']}) braces stances, responding with a combat emote."
+        },
+        {
+            "step": 3,
+            "timestamp_sec": 3.0,
+            "actor": "player_a",
+            "character_id": char_a["id"],
+            "character_name": char_a["name"],
+            "action_type": "cast_attack",
+            "card_id": p_a_atks[0]["id"] if p_a_atks else "atk_quick_peek",
+            "card_name": p_a_atks[0]["name"] if p_a_atks else "Quick Attack",
+            "animation_trigger": "anim_cast_slash" if char_a["id"] == "char_phantom_9" else "anim_cast_slam",
+            "emote_trigger": None,
+            "damage_dealt": 30,
+            "target": "player_b",
+            "sound_cue": "sfx_gunfire_burst",
+            "commentary": f"{player_a_name} initiates with {p_a_atks[0]['name']}, opening up initial angle pressure for 30 HP."
+        },
+        {
+            "step": 4,
+            "timestamp_sec": 4.8,
+            "actor": "player_b",
+            "character_id": char_b["id"],
+            "character_name": char_b["name"],
+            "action_type": "deploy_defence",
+            "card_id": p_b_defs[0]["id"] if p_b_defs else "def_defensive_smoke",
+            "card_name": p_b_defs[0]["name"] if p_b_defs else "Defensive Smoke",
+            "animation_trigger": "anim_deploy_barrier" if char_b["id"] == "char_sol_vanguard" else "anim_deploy_smoke",
+            "emote_trigger": None,
+            "damage_dealt": 0,
+            "target": "zone",
+            "sound_cue": "sfx_shield_thump",
+            "commentary": f"{player_b_name} deploys {p_b_defs[0]['name']} to deny vision and stall the offensive rush."
+        },
+        {
+            "step": 5,
+            "timestamp_sec": 6.5,
+            "actor": "player_b",
+            "character_id": char_b["id"],
+            "character_name": char_b["name"],
+            "action_type": "cast_attack",
+            "card_id": p_b_atks[0]["id"] if p_b_atks else "atk_flash_entry",
+            "card_name": p_b_atks[0]["name"] if p_b_atks else "Counter Attack",
+            "animation_trigger": "anim_cast_cannon" if char_b["id"] == "char_sol_vanguard" else "anim_cast_slash",
+            "emote_trigger": None,
+            "damage_dealt": 35,
+            "target": "player_a",
+            "sound_cue": "sfx_energy_blast",
+            "commentary": f"{player_b_name} pushes through utility with {p_b_atks[0]['name']}, landing a 35 damage counter-strike."
+        },
+        {
+            "step": 6,
+            "timestamp_sec": 8.2,
+            "actor": "player_a",
+            "character_id": char_a["id"],
+            "character_name": char_a["name"],
+            "action_type": "deploy_defence",
+            "card_id": p_a_defs[0]["id"] if p_a_defs else "def_layered_defense",
+            "card_name": p_a_defs[0]["name"] if p_a_defs else "Layered Defense",
+            "animation_trigger": "anim_dodge_roll" if char_a["id"] == "char_phantom_9" else "anim_parry_stance",
+            "emote_trigger": None,
+            "damage_dealt": 0,
+            "target": "self",
+            "sound_cue": "sfx_dodge_woosh",
+            "commentary": f"{player_a_name} utilizes {p_a_defs[0]['name']}, resetting crosshair placement and armor absorption."
+        },
+        {
+            "step": 7,
+            "timestamp_sec": 10.0,
+            "actor": winner_actor,
+            "character_id": char_a["id"] if winner_actor == "player_a" else char_b["id"],
+            "character_name": char_a["name"] if winner_actor == "player_a" else char_b["name"],
+            "action_type": "climax_strike",
+            "card_id": (p_a_atks[1]["id"] if len(p_a_atks) > 1 else p_a_atks[0]["id"]) if winner_actor == "player_a" else (p_b_atks[1]["id"] if len(p_b_atks) > 1 else p_b_atks[0]["id"]),
+            "card_name": (p_a_atks[1]["name"] if len(p_a_atks) > 1 else p_a_atks[0]["name"]) if winner_actor == "player_a" else (p_b_atks[1]["name"] if len(p_b_atks) > 1 else p_b_atks[0]["name"]),
+            "animation_trigger": "anim_cast_teleport" if (char_a["id"] if winner_actor == "player_a" else char_b["id"]) == "char_phantom_9" else "anim_cast_slam",
+            "emote_trigger": None,
+            "damage_dealt": 70,
+            "target": loser_actor,
+            "sound_cue": "sfx_critical_hit",
+            "commentary": f"CRITICAL ROUND BREAKER! {winner_name} executes {auto_mvp}, landing a lethal 70 damage precision headshot!"
+        },
+        {
+            "step": 8,
+            "timestamp_sec": 11.8,
+            "actor": loser_actor,
+            "character_id": char_b["id"] if winner_actor == "player_a" else char_a["id"],
+            "character_name": char_b["name"] if winner_actor == "player_a" else char_a["name"],
+            "action_type": "defeat_reaction",
+            "card_id": None,
+            "card_name": None,
+            "animation_trigger": "anim_defeat",
+            "emote_trigger": "emote_defeat",
+            "damage_dealt": 0,
+            "target": "self",
+            "sound_cue": "sfx_steam_release" if (char_b["id"] if winner_actor == "player_a" else char_a["id"]) == "char_sol_vanguard" else "sfx_glitch_down",
+            "commentary": f"{loser_name} falls to one knee as shields break under relentless pressure."
+        },
+        {
+            "step": 9,
+            "timestamp_sec": 13.2,
+            "actor": winner_actor,
+            "character_id": char_a["id"] if winner_actor == "player_a" else char_b["id"],
+            "character_name": char_a["name"] if winner_actor == "player_a" else char_b["name"],
+            "action_type": "victory_celebration",
+            "card_id": None,
+            "card_name": None,
+            "animation_trigger": "anim_emote_celebrate",
+            "emote_trigger": "emote_celebrate",
+            "damage_dealt": 0,
+            "target": "self",
+            "sound_cue": "sfx_victory_fanfare",
+            "commentary": f"VICTORY SECURED! {winner_name} activates celebration emote. {win_reason}"
+        }
+    ]
+
+    return {
+        "match_id": match_id,
+        "mode": "godot_combat_timeline",
+        "engine_version": "godot_4.x_compatible",
+        "total_duration_sec": 14.5,
+        "player_a": {
+            "name": player_a_name,
+            "character": char_a["name"],
+            "character_id": char_a["id"],
+            "score": player_a_score,
+            "attack_cards": player_a_attack_cards,
+            "defence_cards": player_a_defence_cards
+        },
+        "player_b": {
+            "name": player_b_name,
+            "character": char_b["name"],
+            "character_id": char_b["id"],
+            "score": player_b_score,
+            "attack_cards": player_b_attack_cards,
+            "defence_cards": player_b_defence_cards
+        },
+        "winner_id": winner_id,
+        "winner_name": winner_name,
+        "player_a_score": player_a_score,
+        "player_b_score": player_b_score,
+        "win_reason": win_reason,
+        "mvp_combo": auto_mvp,
+        "timeline_events_count": len(timeline),
+        "timeline": timeline
+    }
+
+
+
+# ==============================================================================
 # SECTION 4: CLI DEMO & MULTIPLAYER MATCH SIMULATOR
 # ==============================================================================
 

@@ -7,29 +7,29 @@ Production-grade Python Web & REST API Server.
 - Serves Web Frontends from `public/` (Arena, Landing, Admin Command Center)
 - Decoupled Player Submission Queue: Web users submit 4-card tactical loadouts
   into a persistent SQLite queue without triggering instant AI or random bots.
-- Admin-Controlled Matchmaking & Sequencing: Admin initiates 1v1 combat adjudication
-  or sequential tournament rounds on demand.
-- 3 Distinct AI API Keys: Attack AI, Defence AI, Master Referee AI.
-- Hardened for Vercel Serverless Hosting with:
-  - Security Headers (CSP, X-Frame-Options, X-Content-Type-Options)
-  - Configurable Admin Authentication (ADMIN_PASSWORD token check)
-  - In-memory Sliding-Window Rate Limiting per Client IP
-  - Safe payload limits & sanitized error responses
+- Admin-Controlled Matchmaking & Manual Adjudication: Admin controls match outcome
+  manually (no automatic AI prediction) and triggers AI Godot sequence generation.
+- Password-gated Admin Panel with required passcode: `K0lst@rno.1`.
+- Godot 4.x / 3.x Combat Sequence Generator & REST Exporter.
+- 2 Playable Characters with full animation and emote manifest.
 
 REST Endpoints:
   - `GET  /api/cards`: Returns all 120 cards (Sanitized of all Tier & Power data).
+  - `GET  /api/characters`: Returns all 2 characters with complete animation/emote suites.
   - `POST /api/submit-match` / `POST /api/submit-loadout`: Queues a player loadout.
   - `GET  /api/submissions`: Lists all queued player loadouts.
   - `DELETE /api/submissions/<id>`: Removes a submission from queue (Admin).
   - `POST /api/submissions/clear`: Clears queued submissions (Admin).
   - `GET  /api/admin/auth-status`: Returns whether admin passcode is required.
-  - `POST /api/admin/verify`: Verifies admin passcode.
+  - `POST /api/admin/verify`: Verifies admin passcode (`K0lst@rno.1`).
   - `GET  /api/admin/keys`: Returns status/masked preview of 3 AI API keys (Admin).
   - `POST /api/admin/keys`: Saves dynamic API keys for Attack, Defence, Evaluation (Admin).
+  - `POST /api/admin/manual-adjudicate`: Manually adjudicates match & generates Godot sequence (Admin).
   - `POST /api/admin/execute-match`: Executes AI combat adjudication for selected players (Admin).
   - `POST /api/admin/execute-sequence`: Executes tournament rounds sequentially across queue (Admin).
   - `GET  /api/matches`: Lists stored match database records.
   - `GET  /api/matches/<id>`: Returns specific evaluated match record.
+  - `GET  /api/matches/<id>/godot-sequence`: Returns pure Godot-ready timeline JSON.
 ================================================================================
 """
 
@@ -44,6 +44,7 @@ from urllib.parse import urlparse, parse_qs
 from typing import Any, Dict, List, Optional
 
 from data.cards import get_public_cards, get_all_cards
+from data.characters import get_all_characters, get_character_by_id
 from database.db import (
     save_player_submission,
     get_all_submissions,
@@ -63,10 +64,15 @@ from database.db import (
     get_player_by_username,
     record_match_for_players
 )
-from match_engine import PlayerLoadoutInput, run_1v1_match
+from match_engine import (
+    PlayerLoadoutInput,
+    run_1v1_match,
+    generate_godot_match_sequence
+)
 
 PORT = 8000
 PUBLIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "public")
+DEFAULT_ADMIN_PASSWORD = "K0lst@rno.1"
 
 # ------------------------------------------------------------------------------
 # IN-MEMORY RATE LIMITING STORE
@@ -172,12 +178,9 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
 
     def _is_admin_authorized(self) -> bool:
         """
-        Validates Admin Passcode / Token.
-        If ADMIN_PASSWORD is not configured, allows requests in open dev mode.
+        Validates Admin Passcode against configured password (defaults to K0lst@rno.1).
         """
-        admin_secret = os.getenv("ADMIN_PASSWORD") or os.getenv("ADMIN_SECRET_KEY") or os.getenv("ADMIN_SECRET")
-        if not admin_secret or not admin_secret.strip():
-            return True
+        admin_secret = os.getenv("ADMIN_PASSWORD") or os.getenv("ADMIN_SECRET_KEY") or os.getenv("ADMIN_SECRET") or DEFAULT_ADMIN_PASSWORD
 
         token = self.headers.get("X-Admin-Token", "").strip()
         if not token:
@@ -231,7 +234,12 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
             cards = get_public_cards()
             return self._send_json({"count": len(cards), "cards": cards})
 
-        # 2. API: Real-time Check Username Availability (High-concurrency indexed lookup)
+        # 2. API: Get Characters & Emotes
+        if parsed.path == "/api/characters":
+            chars = get_all_characters()
+            return self._send_json({"count": len(chars), "characters": chars})
+
+        # 3. API: Real-time Check Username Availability (High-concurrency indexed lookup)
         if parsed.path == "/api/players/check-username":
             query_params = parse_qs(parsed.query)
             username = query_params.get("username", [""])[0].strip()
@@ -244,12 +252,12 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                 "message": "Username is available!" if avail else "Username is already taken."
             })
 
-        # 3. API: Get Player Leaderboard / Roster
+        # 4. API: Get Player Leaderboard / Roster
         if parsed.path == "/api/players":
             players = get_all_players()
             return self._send_json({"count": len(players), "players": players})
 
-        # 4. API: Get Single Player Profile
+        # 5. API: Get Single Player Profile
         if parsed.path.startswith("/api/players/"):
             uname = parsed.path.split("/api/players/")[-1]
             player = get_player_by_username(uname)
@@ -257,21 +265,19 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                 return self._send_json(player)
             return self._send_json({"error": f"Player '{uname}' not found"}, status=404)
 
-        # 5. API: Get Queued Player Submissions
+        # 6. API: Get Queued Player Submissions
         if parsed.path == "/api/submissions":
             subs = get_all_submissions()
             return self._send_json({"count": len(subs), "submissions": subs})
 
-        # 6. API: Admin Auth Status Check
+        # 7. API: Admin Auth Status Check
         if parsed.path == "/api/admin/auth-status":
-            admin_secret = os.getenv("ADMIN_PASSWORD") or os.getenv("ADMIN_SECRET_KEY") or os.getenv("ADMIN_SECRET")
-            auth_required = bool(admin_secret and admin_secret.strip())
-            return self._send_json({"auth_required": auth_required})
+            return self._send_json({"auth_required": True, "protected_panel": True})
 
-        # 7. API: Get Admin 3 AI API Keys Status (Masked, Admin Protected)
+        # 8. API: Get Admin 3 AI API Keys Status (Masked, Admin Protected)
         if parsed.path == "/api/admin/keys":
             if not self._is_admin_authorized():
-                return self._send_json({"error": "Unauthorized: Admin passcode required"}, status=401)
+                return self._send_json({"error": "Unauthorized: Admin passcode required (K0lst@rno.1)"}, status=401)
             keys = get_admin_api_keys()
             return self._send_json({
                 "attack_ai": _mask_key(keys.get("attack_key")),
@@ -279,12 +285,51 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                 "evaluation_ai": _mask_key(keys.get("evaluation_key"))
             })
 
-        # 8. API: Get Matches Database
+        # 9. API: Get Matches Database
         if parsed.path == "/api/matches":
             matches = get_all_matches()
             return self._send_json({"matches": matches})
 
-        # 9. API: Get Single Match
+        # 10. API: Get Godot Combat Sequence for Match
+        if parsed.path.startswith("/api/matches/") and parsed.path.endswith("/godot-sequence"):
+            parts = parsed.path.strip("/").split("/")
+            # e.g., ["api", "matches", "<match_id>", "godot-sequence"]
+            if len(parts) >= 4:
+                match_id = parts[2]
+                if match_id == "latest":
+                    all_m = get_all_matches()
+                    if not all_m:
+                        return self._send_json({"error": "No matches found"}, status=404)
+                    match_record = all_m[0]
+                else:
+                    match_record = get_match_by_id(match_id)
+
+                if not match_record:
+                    return self._send_json({"error": "Match not found"}, status=404)
+
+                eval_data = match_record.get("evaluation") or {}
+                godot_seq = eval_data.get("godot_sequence")
+                if not godot_seq:
+                    p_a = match_record.get("player_a") or {}
+                    p_b = match_record.get("player_b") or {}
+                    godot_seq = generate_godot_match_sequence(
+                        match_id=match_record.get("match_id", match_id),
+                        player_a_name=p_a.get("name", "Player A"),
+                        player_a_attack_cards=p_a.get("attack_cards", []),
+                        player_a_defence_cards=p_a.get("defence_cards", []),
+                        player_a_character_id=p_a.get("character_id", "char_phantom_9"),
+                        player_b_name=p_b.get("name", "Player B"),
+                        player_b_attack_cards=p_b.get("attack_cards", []),
+                        player_b_defence_cards=p_b.get("defence_cards", []),
+                        player_b_character_id=p_b.get("character_id", "char_sol_vanguard"),
+                        winner_id=match_record.get("winner_id", "player_a"),
+                        player_a_score=match_record.get("player_a_score", 13),
+                        player_b_score=match_record.get("player_b_score", 9),
+                        win_reason=match_record.get("win_reason", "Tactical round completion.")
+                    )
+                return self._send_json(godot_seq)
+
+        # 11. API: Get Single Match
         if parsed.path.startswith("/api/matches/"):
             match_id = parsed.path.split("/api/matches/")[-1]
             match_record = get_match_by_id(match_id)
@@ -301,7 +346,7 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
         # API: Delete single submission from queue (Admin Protected)
         if parsed.path.startswith("/api/submissions/"):
             if not self._is_admin_authorized():
-                return self._send_json({"error": "Unauthorized: Admin passcode required"}, status=401)
+                return self._send_json({"error": "Unauthorized: Admin passcode required (K0lst@rno.1)"}, status=401)
             sub_id = parsed.path.split("/api/submissions/")[-1]
             success = delete_submission(sub_id)
             if success:
@@ -314,7 +359,7 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
 
         # ----------------------------------------------------------------------
-        # 1. API: Verify Admin Passcode
+        # 1. API: Verify Admin Passcode (Must match K0lst@rno.1)
         # ----------------------------------------------------------------------
         if parsed.path == "/api/admin/verify":
             if not self._is_admin_authorized():
@@ -322,7 +367,113 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
             return self._send_json({"valid": True, "message": "Admin authorization verified"})
 
         # ----------------------------------------------------------------------
-        # 2. API: Register or Fetch Player Profile
+        # 2. API: Manual Match Adjudication + AI Godot Sequence Generation (Admin Protected)
+        # ----------------------------------------------------------------------
+        if parsed.path == "/api/admin/manual-adjudicate":
+            try:
+                if not self._is_admin_authorized():
+                    return self._send_json({"error": "Unauthorized: Admin passcode required (K0lst@rno.1)"}, status=401)
+
+                payload = self._read_body_json()
+                all_cards = get_all_cards()
+
+                p_a_name = (payload.get("player_a_name") or "Agent Alpha").strip()
+                p_a_atk = payload.get("player_a_attack_cards", [])
+                p_a_def = payload.get("player_a_defence_cards", [])
+                p_a_char = payload.get("player_a_character_id", "char_phantom_9")
+
+                p_b_name = (payload.get("player_b_name") or "Agent Omega").strip()
+                p_b_atk = payload.get("player_b_attack_cards", [])
+                p_b_def = payload.get("player_b_defence_cards", [])
+                p_b_char = payload.get("player_b_character_id", "char_sol_vanguard")
+
+                winner_id = payload.get("winner_id", "player_a")  # "player_a", "player_b", or "draw"
+                score_a = int(payload.get("player_a_score", 13))
+                score_b = int(payload.get("player_b_score", 9))
+                win_reason = payload.get("win_reason", "Manual tactical adjudication by match admin.")
+                mvp_combo = payload.get("mvp_combo")
+
+                # If submission IDs provided, mark queue items as completed
+                sub_a_id = payload.get("submission_a_id")
+                sub_b_id = payload.get("submission_b_id")
+                if sub_a_id:
+                    update_submission_status(sub_a_id, "completed")
+                if sub_b_id:
+                    update_submission_status(sub_b_id, "completed")
+
+                # Ensure players exist in registry
+                register_player(p_a_name)
+                register_player(p_b_name)
+
+                # Create match record
+                match_rec = create_match_record(
+                    player_a_name=p_a_name,
+                    player_a_attack_cards=p_a_atk,
+                    player_a_defence_cards=p_a_def,
+                    player_b_name=p_b_name,
+                    player_b_attack_cards=p_b_atk,
+                    player_b_defence_cards=p_b_def,
+                    status="completed"
+                )
+                match_id = match_rec["match_id"]
+
+                # Generate AI Godot Combat Action Timeline
+                godot_sequence = generate_godot_match_sequence(
+                    match_id=match_id,
+                    player_a_name=p_a_name,
+                    player_a_attack_cards=p_a_atk,
+                    player_a_defence_cards=p_a_def,
+                    player_a_character_id=p_a_char,
+                    player_b_name=p_b_name,
+                    player_b_attack_cards=p_b_atk,
+                    player_b_defence_cards=p_b_def,
+                    player_b_character_id=p_b_char,
+                    winner_id=winner_id,
+                    player_a_score=score_a,
+                    player_b_score=score_b,
+                    win_reason=win_reason,
+                    mvp_combo=mvp_combo
+                )
+
+                # Persist full outcome & Godot timeline
+                eval_payload = {
+                    "winner_id": winner_id,
+                    "winner_name": p_a_name if winner_id == "player_a" else (p_b_name if winner_id == "player_b" else "Tie / Draw"),
+                    "win_reason": win_reason,
+                    "player_a_score": {"total_score": score_a, "synergy_score": 85},
+                    "player_b_score": {"total_score": score_b, "synergy_score": 80},
+                    "mvp_combo": godot_sequence.get("mvp_combo"),
+                    "play_by_play_commentary": f"Admin manual outcome: {winner_id.upper()} takes the victory ({score_a}-{score_b}). {win_reason}",
+                    "combat_log": [f"[{e['timestamp_sec']:.1f}s] {e['commentary']}" for e in godot_sequence.get("timeline", [])],
+                    "godot_sequence": godot_sequence,
+                    "character_a": p_a_char,
+                    "character_b": p_b_char
+                }
+
+                update_match_result(match_id, eval_payload)
+
+                # Update player stats
+                record_match_for_players(
+                    player_a_name=p_a_name,
+                    player_b_name=p_b_name,
+                    winner_id=winner_id,
+                    p_a_score=score_a,
+                    p_b_score=score_b
+                )
+
+                updated_match = get_match_by_id(match_id)
+                return self._send_json({
+                    "status": "success",
+                    "message": "Manual match adjudicated and Godot timeline generated successfully!",
+                    "match": updated_match,
+                    "godot_sequence": godot_sequence
+                }, status=201)
+
+            except Exception as e:
+                return self._send_json({"error": f"Manual adjudication failed: {str(e)}"}, status=400)
+
+        # ----------------------------------------------------------------------
+        # 3. API: Register or Fetch Player Profile
         # ----------------------------------------------------------------------
         if parsed.path == "/api/players/register":
             try:
@@ -344,7 +495,7 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                 return self._send_json({"error": str(e)}, status=400)
 
         # ----------------------------------------------------------------------
-        # 3. API: Submit Player Loadout (Decoupled into queue - NO auto AI run)
+        # 4. API: Submit Player Loadout (Decoupled into queue - NO auto AI run)
         # ----------------------------------------------------------------------
         if parsed.path in ["/api/submit-match", "/api/submit-loadout"]:
             try:
@@ -402,7 +553,7 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                 return self._send_json({"error": f"Invalid request: {str(e)}"}, status=400)
 
         # ----------------------------------------------------------------------
-        # 4. API: Instant 1v1 Arena Battle (Direct Play & 1-2 Min Simulation)
+        # 5. API: Instant 1v1 Arena Battle (Direct Play & 1-2 Min Simulation)
         # ----------------------------------------------------------------------
         if parsed.path == "/api/instant-battle":
             try:
@@ -434,7 +585,6 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                 opp_def = payload.get("opponent_defence_cards", [])
 
                 if not opp_name or len(opp_atk) != 2 or len(opp_def) != 2:
-                    # Pick rival from queued submissions or generate dynamic rival
                     queued = [s for s in get_all_submissions() if s.get("status") == "queued" and s.get("player_name") != player_name]
                     if queued:
                         rival_sub = random.choice(queued)
@@ -499,24 +649,24 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                 return self._send_json({"error": f"Instant battle failed: {str(e)}"}, status=400)
 
         # ----------------------------------------------------------------------
-        # 5. API: Clear All Submissions (Admin Protected)
+        # 6. API: Clear All Submissions (Admin Protected)
         # ----------------------------------------------------------------------
         if parsed.path == "/api/submissions/clear":
             try:
                 if not self._is_admin_authorized():
-                    return self._send_json({"error": "Unauthorized: Admin passcode required"}, status=401)
+                    return self._send_json({"error": "Unauthorized: Admin passcode required (K0lst@rno.1)"}, status=401)
                 clear_all_submissions()
                 return self._send_json({"status": "cleared", "message": "All submissions cleared."})
             except Exception as e:
                 return self._send_json({"error": str(e)}, status=500)
 
         # ----------------------------------------------------------------------
-        # 6. API: Save Admin 3 AI API Keys (Admin Protected)
+        # 7. API: Save Admin 3 AI API Keys (Admin Protected)
         # ----------------------------------------------------------------------
         if parsed.path == "/api/admin/keys":
             try:
                 if not self._is_admin_authorized():
-                    return self._send_json({"error": "Unauthorized: Admin passcode required"}, status=401)
+                    return self._send_json({"error": "Unauthorized: Admin passcode required (K0lst@rno.1)"}, status=401)
 
                 payload = self._read_body_json()
                 atk_key = payload.get("attack_key")
@@ -543,17 +693,16 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                 return self._send_json({"error": str(e)}, status=400)
 
         # ----------------------------------------------------------------------
-        # 7. API: Admin Execute 1v1 Match Between Chosen Players (Admin Protected)
+        # 8. API: Admin Execute 1v1 Match Between Chosen Players (Admin Protected)
         # ----------------------------------------------------------------------
         if parsed.path == "/api/admin/execute-match":
             try:
                 if not self._is_admin_authorized():
-                    return self._send_json({"error": "Unauthorized: Admin passcode required"}, status=401)
+                    return self._send_json({"error": "Unauthorized: Admin passcode required (K0lst@rno.1)"}, status=401)
 
                 payload = self._read_body_json()
                 all_cards = get_all_cards()
 
-                # Case A: Using submission IDs
                 sub_a_id = payload.get("submission_a_id")
                 sub_b_id = payload.get("submission_b_id")
 
@@ -583,7 +732,6 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                     p_b_def = sub_b["defence_cards"]
                     update_submission_status(sub_b_id, "matched")
 
-                # Fallback defaults if not fully specified
                 p_a_name = (p_a_name or "Agent Alpha").strip()
                 p_b_name = (p_b_name or "Agent Omega").strip()
 
@@ -595,7 +743,6 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                 p_b_atk = p_b_atk or random.sample(atk_pool, 2)
                 p_b_def = p_b_def or random.sample(def_pool, 2)
 
-                # Create match record in DB
                 match_rec = create_match_record(
                     player_a_name=p_a_name,
                     player_a_attack_cards=p_a_atk,
@@ -624,7 +771,6 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                     defence_card_ids=p_b_def
                 )
 
-                # Execute AI combat synchronously
                 execution_result = _execute_ai_combat_sync(
                     match_id=match_rec["match_id"],
                     player_a_input=p_a_input,
@@ -645,24 +791,22 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                 return self._send_json({"error": f"Match execution failed: {str(e)}"}, status=400)
 
         # ----------------------------------------------------------------------
-        # 8. API: Admin Execute Sequence (Tournament Round across queued players, Admin Protected)
+        # 9. API: Admin Execute Sequence (Tournament Round across queued players, Admin Protected)
         # ----------------------------------------------------------------------
         if parsed.path == "/api/admin/execute-sequence":
             try:
                 if not self._is_admin_authorized():
-                    return self._send_json({"error": "Unauthorized: Admin passcode required"}, status=401)
+                    return self._send_json({"error": "Unauthorized: Admin passcode required (K0lst@rno.1)"}, status=401)
 
                 payload = self._read_body_json()
                 all_cards = get_all_cards()
 
-                # Get queued submissions
                 submissions = get_all_submissions(status="queued")
                 if len(submissions) < 2:
                     return self._send_json({
                         "error": f"Need at least 2 queued submissions to run a sequence! (Currently have {len(submissions)})"
                     }, status=400)
 
-                # Pair sequentially (0 vs 1, 2 vs 3, etc.)
                 executed_matches = []
                 for i in range(0, len(submissions) - 1, 2):
                     sub_a = submissions[i]
@@ -730,8 +874,8 @@ def start_server(port: int = PORT):
     print("\n" + "=" * 80)
     print(f" 🚀 TACTICAL CARD GAME & TOURNAMENT SERVER RUNNING")
     print(f" 🌐 Arena UI : http://localhost:{port}/arena.html")
-    print(f" 🛠️ Admin UI : http://localhost:{port}/admin.html")
-    print(f" 📦 REST API : /api/cards, /api/submissions, /api/admin/execute-match")
+    print(f" 🛠️ Admin UI : http://localhost:{port}/admin.html (Passcode: K0lst@rno.1)")
+    print(f" 📦 REST API : /api/cards, /api/characters, /api/admin/manual-adjudicate")
     print("=" * 80 + "\n")
     try:
         httpd.serve_forever()

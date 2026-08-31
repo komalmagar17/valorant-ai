@@ -2,12 +2,15 @@
  * ============================================================================
  * ADMIN COMMAND CENTER SCRIPT (admin.js)
  * ============================================================================
- * Orchestrates 3 AI API Keys, Player Submissions Queue, Deterministic 1v1
- * Matchmaking, Sequential Tournament Execution, and Real-time Results.
- * Hardened with XSS prevention and X-Admin-Token authentication.
+ * - Security Gate Passcode Protection: K0lst@rno.1
+ * - 100% Manual Match Adjudication (No AI predictions)
+ * - AI Godot Keyframe Combat Sequence Generation & REST Export
+ * - Interactive 2-Character Showcase & Emote Stage
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+  const CORRECT_PASSCODE = 'K0lst@rno.1';
+
   // Initialize Lucide Icons
   if (window.lucide) {
     window.lucide.createIcons();
@@ -17,69 +20,49 @@ document.addEventListener('DOMContentLoaded', () => {
   let allCardsMap = {};
   let queuedSubmissions = [];
   let storedMatches = [];
-  let selectedSubA = null; // { submission_id, player_name, attack_cards, defence_cards }
+  let selectedSubA = null;
   let selectedSubB = null;
+  let currentGodotSequence = null;
+
+  // DOM Elements - Security Gate
+  const securityGateOverlay = document.getElementById('securityGateOverlay');
+  const formGateAuth = document.getElementById('formGateAuth');
+  const gatePasswordInput = document.getElementById('gatePasswordInput');
+  const gateErrorMsg = document.getElementById('gateErrorMsg');
+  const btnToggleGatePass = document.getElementById('btnToggleGatePass');
+  const btnLockAdmin = document.getElementById('btnLockAdmin');
 
   // DOM Elements - Metrics
   const statQueuedPlayers = document.getElementById('statQueuedPlayers');
   const statRegisteredPlayers = document.getElementById('statRegisteredPlayers');
   const statCompletedMatches = document.getElementById('statCompletedMatches');
-  const statConfiguredKeys = document.getElementById('statConfiguredKeys');
   const queueCountBadge = document.getElementById('queueCountBadge');
   const playerCountBadge = document.getElementById('playerCountBadge');
   const historyCountBadge = document.getElementById('historyCountBadge');
   const btnRefreshAll = document.getElementById('btnRefreshAll');
-  const btnAdminPasscode = document.getElementById('btnAdminPasscode');
   const playersTableBody = document.getElementById('playersTableBody');
 
-  // DOM Elements - API Keys
-  const formApiKeys = document.getElementById('formApiKeys');
-  const inputAttackKey = document.getElementById('inputAttackKey');
-  const inputDefenceKey = document.getElementById('inputDefenceKey');
-  const inputEvalKey = document.getElementById('inputEvalKey');
-  const badgeAttackKey = document.getElementById('badgeAttackKey');
-  const badgeDefenceKey = document.getElementById('badgeDefenceKey');
-  const badgeEvalKey = document.getElementById('badgeEvalKey');
-  const previewAttackKey = document.getElementById('previewAttackKey');
-  const previewDefenceKey = document.getElementById('previewDefenceKey');
-  const previewEvalKey = document.getElementById('previewEvalKey');
-  const keysSavedNotice = document.getElementById('keysSavedNotice');
-
-  // DOM Elements - Matchmaking
+  // DOM Elements - Matchmaking Queue
   const chipPlayerA = document.getElementById('chipPlayerA');
   const chipPlayerB = document.getElementById('chipPlayerB');
-  const btnExecuteSelectedMatch = document.getElementById('btnExecuteSelectedMatch');
-  const btnExecuteSequence = document.getElementById('btnExecuteSequence');
   const btnClearQueue = document.getElementById('btnClearQueue');
   const submissionsListContainer = document.getElementById('submissionsListContainer');
 
-  // DOM Elements - Live Combat Console
-  const combatStatusBadge = document.getElementById('combatStatusBadge');
-  const aiStepper = document.getElementById('aiStepper');
-  const step1 = document.getElementById('step1');
-  const step2 = document.getElementById('step2');
-  const step3 = document.getElementById('step3');
-  const matchResultView = document.getElementById('matchResultView');
+  // DOM Elements - Manual Adjudication Form
+  const formManualAdjudicate = document.getElementById('formManualAdjudicate');
+  const selectCharA = document.getElementById('selectCharA');
+  const selectCharB = document.getElementById('selectCharB');
+  const inputScoreA = document.getElementById('inputScoreA');
+  const inputScoreB = document.getElementById('inputScoreB');
+  const inputWinReason = document.getElementById('inputWinReason');
+  const inputMvpCombo = document.getElementById('inputMvpCombo');
+  const btnRunManualAdj = document.getElementById('btnRunManualAdj');
 
-  const resWinnerName = document.getElementById('resWinnerName');
-  const resWinReason = document.getElementById('resWinReason');
-  const resMvpCombo = document.getElementById('resMvpCombo');
-  const resPlayerAName = document.getElementById('resPlayerAName');
-  const resPlayerBName = document.getElementById('resPlayerBName');
-  const resScoreA = document.getElementById('resScoreA');
-  const resScoreB = document.getElementById('resScoreB');
-  const resSynergyValA = document.getElementById('resSynergyValA');
-  const resSynergyValB = document.getElementById('resSynergyValB');
-  const resSynergyFillA = document.getElementById('resSynergyFillA');
-  const resSynergyFillB = document.getElementById('resSynergyFillB');
-  const resLoadoutA = document.getElementById('resLoadoutA');
-  const resLoadoutB = document.getElementById('resLoadoutB');
-  const resSeqTitleA = document.getElementById('resSeqTitleA');
-  const resSeqTitleB = document.getElementById('resSeqTitleB');
-  const resSequenceListA = document.getElementById('resSequenceListA');
-  const resSequenceListB = document.getElementById('resSequenceListB');
-  const resCommentaryText = document.getElementById('resCommentaryText');
-  const resCombatLogs = document.getElementById('resCombatLogs');
+  // DOM Elements - Godot Timeline & Export
+  const godotTimelineList = document.getElementById('godotTimelineList');
+  const godotRawJsonDisplay = document.getElementById('godotRawJsonDisplay');
+  const btnCopyGodotJson = document.getElementById('btnCopyGodotJson');
+  const btnDownloadGodotJson = document.getElementById('btnDownloadGodotJson');
 
   // DOM Elements - Matches History
   const matchesTableBody = document.getElementById('matchesTableBody');
@@ -98,30 +81,137 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Toggle Password Visibility
-  document.querySelectorAll('.btn-toggle-vis').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const targetId = btn.getAttribute('data-target');
-      const input = document.getElementById(targetId);
-      if (input) {
-        input.type = input.type === 'password' ? 'text' : 'password';
+  // Audio Synthesizer for SFX & Emotes
+  const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+  const audioCtx = AudioCtxClass ? new AudioCtxClass() : null;
+
+  function playSynthSfx(type) {
+    if (!audioCtx) return;
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    try {
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      if (type === 'unlock') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.2);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      } else if (type === 'sfx_blade_whoosh') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(900, now);
+        osc.frequency.exponentialRampToValueAtTime(200, now + 0.25);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.25);
+      } else if (type === 'sfx_victory_fanfare') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.12);
+        osc.frequency.setValueAtTime(783.99, now + 0.24);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.5);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.5);
+      } else if (type === 'sfx_furnace_blast' || type === 'sfx_molten_burst') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(120, now);
+        osc.frequency.exponentialRampToValueAtTime(60, now + 0.35);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.35);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.35);
+      } else {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.linearRampToValueAtTime(900, now + 0.15);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.2);
       }
-    });
-  });
+    } catch (e) {}
+  }
 
   // ==========================================================================
-  // SECTION 0: ADMIN AUTHENTICATION TOKEN HELPERS
+  // SECTION 1: SECURITY GATE AUTHENTICATION (K0lst@rno.1)
   // ==========================================================================
   function getAdminToken() {
-    return localStorage.getItem('veer_admin_token') || '';
+    return localStorage.getItem('veer_admin_token') || sessionStorage.getItem('veer_admin_token') || '';
   }
 
   function setAdminToken(token) {
-    if (token && token.trim()) {
-      localStorage.setItem('veer_admin_token', token.trim());
+    if (token) {
+      localStorage.setItem('veer_admin_token', token);
+      sessionStorage.setItem('veer_admin_token', token);
     } else {
       localStorage.removeItem('veer_admin_token');
+      sessionStorage.removeItem('veer_admin_token');
     }
+  }
+
+  function checkSecurityGate() {
+    const token = getAdminToken();
+    if (token === CORRECT_PASSCODE) {
+      securityGateOverlay.style.display = 'none';
+      initializeAdminData();
+    } else {
+      securityGateOverlay.style.display = 'flex';
+      gatePasswordInput.focus();
+    }
+  }
+
+  formGateAuth.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const entered = gatePasswordInput.value.trim();
+    if (entered === CORRECT_PASSCODE) {
+      gateErrorMsg.style.display = 'none';
+      setAdminToken(entered);
+      playSynthSfx('unlock');
+      securityGateOverlay.classList.add('fade-out');
+      setTimeout(() => {
+        securityGateOverlay.style.display = 'none';
+        securityGateOverlay.classList.remove('fade-out');
+      }, 400);
+      initializeAdminData();
+    } else {
+      gateErrorMsg.style.display = 'block';
+      gatePasswordInput.classList.add('input-error-shake');
+      setTimeout(() => {
+        gatePasswordInput.classList.remove('input-error-shake');
+      }, 500);
+    }
+  });
+
+  if (btnToggleGatePass) {
+    btnToggleGatePass.addEventListener('click', () => {
+      gatePasswordInput.type = gatePasswordInput.type === 'password' ? 'text' : 'password';
+    });
+  }
+
+  if (btnLockAdmin) {
+    btnLockAdmin.addEventListener('click', () => {
+      setAdminToken('');
+      securityGateOverlay.style.display = 'flex';
+      gatePasswordInput.value = '';
+      gateErrorMsg.style.display = 'none';
+      gatePasswordInput.focus();
+    });
   }
 
   async function adminFetch(url, options = {}) {
@@ -133,48 +223,43 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const res = await fetch(url, options);
     if (res.status === 401) {
-      const pass = prompt('🔐 Admin Passcode Required:\nPlease enter the admin passcode:');
-      if (pass !== null) {
-        setAdminToken(pass.trim());
-        options.headers['X-Admin-Token'] = pass.trim();
-        options.headers['Authorization'] = `Bearer ${pass.trim()}`;
-        return fetch(url, options);
-      }
+      securityGateOverlay.style.display = 'flex';
     }
     return res;
   }
 
-  if (btnAdminPasscode) {
-    btnAdminPasscode.addEventListener('click', async () => {
-      const current = getAdminToken();
-      const newPass = prompt(
-        '🔐 Configure Admin Passcode:\nEnter your ADMIN_PASSWORD (or leave blank to clear saved token):',
-        current
-      );
-      if (newPass !== null) {
-        setAdminToken(newPass);
-        // Verify with backend
-        try {
-          const res = await adminFetch('/api/admin/verify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-          });
-          const data = await res.json();
-          if (res.ok && data.valid) {
-            alert('✓ Admin authentication verified successfully!');
-          } else {
-            alert('⚠️ Passcode saved locally, but server rejected verification.');
-          }
-        } catch (err) {
-          alert('Passcode saved locally.');
-        }
-        loadApiKeys();
-      }
-    });
-  }
+  // ==========================================================================
+  // SECTION 2: INTERACTIVE CHARACTER EMOTE STAGE
+  // ==========================================================================
+  window.triggerCharEmote = function(charId, emoteId, emoteName, dialogue, soundCue) {
+    playSynthSfx(soundCue || 'sfx_friendly_chime');
+
+    const stageId = charId === 'char_phantom_9' ? 'stagePhantom' : 'stageVanguard';
+    const actorId = charId === 'char_phantom_9' ? 'visualActorPhantom' : 'visualActorVanguard';
+    const bubbleId = charId === 'char_phantom_9' ? 'bubblePhantom' : 'bubbleVanguard';
+
+    const stageEl = document.getElementById(stageId);
+    const actorEl = document.getElementById(actorId);
+    const bubbleEl = document.getElementById(bubbleId);
+
+    if (!stageEl || !actorEl || !bubbleEl) return;
+
+    // Visual effect on stage
+    stageEl.classList.remove('emote-active');
+    void stageEl.offsetWidth; // trigger reflow
+    stageEl.classList.add('emote-active');
+
+    actorEl.textContent = `⚡ [${emoteName.toUpperCase()}] ACTIVE`;
+    bubbleEl.textContent = dialogue;
+
+    setTimeout(() => {
+      stageEl.classList.remove('emote-active');
+      actorEl.textContent = charId === 'char_phantom_9' ? '🗡️ PHANTOM-9 READY' : '🛡️ SOL-VANGUARD READY';
+    }, 2800);
+  };
 
   // ==========================================================================
-  // SECTION 1: FETCH CARDS DATABASE
+  // SECTION 3: QUEUED PLAYERS & MATCHMAKING
   // ==========================================================================
   async function fetchCards() {
     try {
@@ -195,92 +280,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return cardId;
   }
 
-  // ==========================================================================
-  // SECTION 2: 3 AI API KEYS MANAGEMENT
-  // ==========================================================================
-  async function loadApiKeys() {
-    try {
-      const res = await adminFetch('/api/admin/keys');
-      if (res.status === 401) {
-        statConfiguredKeys.textContent = 'Auth Req';
-        return;
-      }
-      const data = await res.json();
-
-      let activeCount = 0;
-
-      // 1. Attack Key
-      if (data.attack_ai) {
-        const isAct = data.attack_ai.configured;
-        if (isAct) activeCount++;
-        badgeAttackKey.textContent = isAct ? '✓ Live Gemini' : 'Offline Mock';
-        badgeAttackKey.className = `key-status-badge ${isAct ? 'active' : 'mock'}`;
-        previewAttackKey.textContent = `Current: ${data.attack_ai.preview}`;
-      }
-
-      // 2. Defence Key
-      if (data.defence_ai) {
-        const isAct = data.defence_ai.configured;
-        if (isAct) activeCount++;
-        badgeDefenceKey.textContent = isAct ? '✓ Live Gemini' : 'Offline Mock';
-        badgeDefenceKey.className = `key-status-badge ${isAct ? 'active' : 'mock'}`;
-        previewDefenceKey.textContent = `Current: ${data.defence_ai.preview}`;
-      }
-
-      // 3. Evaluation Key
-      if (data.evaluation_ai) {
-        const isAct = data.evaluation_ai.configured;
-        if (isAct) activeCount++;
-        badgeEvalKey.textContent = isAct ? '✓ Live Gemini' : 'Offline Mock';
-        badgeEvalKey.className = `key-status-badge ${isAct ? 'active' : 'mock'}`;
-        previewEvalKey.textContent = `Current: ${data.evaluation_ai.preview}`;
-      }
-
-      statConfiguredKeys.textContent = `${activeCount}/3`;
-
-    } catch (e) {
-      console.error('Failed to load API keys:', e);
-    }
-  }
-
-  formApiKeys.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const payload = {};
-    const atkVal = inputAttackKey.value.trim();
-    const defVal = inputDefenceKey.value.trim();
-    const evalVal = inputEvalKey.value.trim();
-
-    if (atkVal) payload.attack_key = atkVal;
-    if (defVal) payload.defence_key = defVal;
-    if (evalVal) payload.evaluation_key = evalVal;
-
-    try {
-      const res = await adminFetch('/api/admin/keys', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-
-      if (data.status === 'success') {
-        keysSavedNotice.style.display = 'block';
-        setTimeout(() => { keysSavedNotice.style.display = 'none'; }, 4000);
-        inputAttackKey.value = '';
-        inputDefenceKey.value = '';
-        inputEvalKey.value = '';
-        loadApiKeys();
-      } else {
-        alert(data.error || 'Failed to save API keys');
-      }
-    } catch (e) {
-      alert('Error updating API keys');
-    }
-  });
-
-  // ==========================================================================
-  // SECTION 3: PLAYER SUBMISSIONS QUEUE & MATCHMAKING
-  // ==========================================================================
   async function loadSubmissions() {
     try {
       const res = await fetch('/api/submissions');
@@ -293,7 +292,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       renderSubmissionsList(activeSubs);
       renderChips();
-      updateMatchmakingActionState();
 
     } catch (e) {
       console.error('Failed to load submissions:', e);
@@ -303,7 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderSubmissionsList(activeSubs) {
     if (activeSubs.length === 0) {
       submissionsListContainer.innerHTML = `
-        <div style="grid-column: 1 / -1; padding: 36px 20px; text-align: center; color: var(--text-muted); background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.1);">
+        <div style="padding: 36px 20px; text-align: center; color: var(--text-muted); background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.1);">
           <i data-lucide="inbox" style="font-size: 2rem; margin-bottom: 8px; opacity: 0.5;"></i>
           <p style="font-size: 0.95rem; margin-bottom: 4px;">No player loadouts currently queued.</p>
           <p style="font-size: 0.8rem; opacity: 0.7;">Submit tactics from <a href="arena.html" style="color:#00f2ff; text-decoration:underline;">Player Arena</a> to populate queue.</p>
@@ -372,7 +370,6 @@ document.addEventListener('DOMContentLoaded', () => {
     renderChips();
     const activeSubs = queuedSubmissions.filter(s => s.status === 'queued');
     renderSubmissionsList(activeSubs);
-    updateMatchmakingActionState();
   };
 
   window.deleteSub = async function(subId) {
@@ -383,7 +380,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (selectedSubB && selectedSubB.submission_id === subId) selectedSubB = null;
       renderChips();
       loadSubmissions();
-      updateMatchmakingActionState();
     } catch (e) {
       alert('Failed to delete submission');
     }
@@ -397,7 +393,6 @@ document.addEventListener('DOMContentLoaded', () => {
       selectedSubB = null;
       renderChips();
       loadSubmissions();
-      updateMatchmakingActionState();
     } catch (e) {
       alert('Failed to clear queue');
     }
@@ -408,7 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
       chipPlayerA.innerHTML = `<strong>${escapeHtml(selectedSubA.player_name)}</strong> <small style="cursor:pointer;" onclick="window.pickForSlot('A', '${escapeHtml(selectedSubA.submission_id)}')">✕</small>`;
       chipPlayerA.className = 'selected-player-chip filled';
     } else {
-      chipPlayerA.innerHTML = `<span class="chip-placeholder">None Selected (Click below)</span>`;
+      chipPlayerA.innerHTML = `<span class="chip-placeholder">None Selected (Click queue below)</span>`;
       chipPlayerA.className = 'selected-player-chip';
     }
 
@@ -416,52 +411,85 @@ document.addEventListener('DOMContentLoaded', () => {
       chipPlayerB.innerHTML = `<strong>${escapeHtml(selectedSubB.player_name)}</strong> <small style="cursor:pointer;" onclick="window.pickForSlot('B', '${escapeHtml(selectedSubB.submission_id)}')">✕</small>`;
       chipPlayerB.className = 'selected-player-chip filled';
     } else {
-      chipPlayerB.innerHTML = `<span class="chip-placeholder">None Selected (Click below)</span>`;
+      chipPlayerB.innerHTML = `<span class="chip-placeholder">None Selected (Click queue below)</span>`;
       chipPlayerB.className = 'selected-player-chip';
     }
   }
 
-  function updateMatchmakingActionState() {
-    btnExecuteSelectedMatch.disabled = !(selectedSubA && selectedSubB);
-  }
+  // Radio button styling for winner
+  document.querySelectorAll('input[name="manualWinner"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      document.querySelectorAll('.winner-radio-btn').forEach(btn => btn.classList.remove('active'));
+      radio.closest('.winner-radio-btn').classList.add('active');
+    });
+  });
 
   // ==========================================================================
-  // SECTION 4: 1v1 MATCH EXECUTION & SEQUENCE RUNNER
+  // SECTION 4: MANUAL MATCH ADJUDICATION & GODOT SEQUENCE GENERATION
   // ==========================================================================
-  btnExecuteSelectedMatch.addEventListener('click', async () => {
-    if (!selectedSubA || !selectedSubB) {
-      alert('Please select both Player A and Player B from the queue!');
-      return;
-    }
+  formManualAdjudicate.addEventListener('submit', async (e) => {
+    e.preventDefault();
 
-    document.getElementById('liveCombatSection').scrollIntoView({ behavior: 'smooth' });
-    startStepperAnim();
+    const pAName = selectedSubA ? selectedSubA.player_name : 'Agent Alpha';
+    const pBName = selectedSubB ? selectedSubB.player_name : 'Agent Omega';
+
+    const atkPool = Object.keys(allCardsMap).filter(k => allCardsMap[k].category === 'attack');
+    const defPool = Object.keys(allCardsMap).filter(k => allCardsMap[k].category === 'defence');
+
+    const pAAtk = selectedSubA ? selectedSubA.attack_cards : [atkPool[0] || 'atk_quick_peek', atkPool[1] || 'atk_flash_entry'];
+    const pADef = selectedSubA ? selectedSubA.defence_cards : [defPool[0] || 'def_basic_hold', defPool[1] || 'def_defensive_smoke'];
+
+    const pBAtk = selectedSubB ? selectedSubB.attack_cards : [atkPool[2] || 'atk_double_peek', atkPool[3] || 'atk_split_pressure'];
+    const pBDef = selectedSubB ? selectedSubB.defence_cards : [defPool[2] || 'def_layered_defense', defPool[3] || 'def_antirush_setup'];
+
+    const winnerRadio = document.querySelector('input[name="manualWinner"]:checked');
+    const winnerId = winnerRadio ? winnerRadio.value : 'player_a';
+
+    const payload = {
+      submission_a_id: selectedSubA ? selectedSubA.submission_id : null,
+      submission_b_id: selectedSubB ? selectedSubB.submission_id : null,
+      player_a_name: pAName,
+      player_a_attack_cards: pAAtk,
+      player_a_defence_cards: pADef,
+      player_a_character_id: selectCharA.value,
+      player_b_name: pBName,
+      player_b_attack_cards: pBAtk,
+      player_b_defence_cards: pBDef,
+      player_b_character_id: selectCharB.value,
+      winner_id: winnerId,
+      player_a_score: parseInt(inputScoreA.value, 10) || 13,
+      player_b_score: parseInt(inputScoreB.value, 10) || 9,
+      win_reason: inputWinReason.value.trim() || 'Tactical superiority and decisive ability coordination.',
+      mvp_combo: inputMvpCombo.value.trim() || 'Quick Peek + Flash Entry'
+    };
+
+    btnRunManualAdj.disabled = true;
+    btnRunManualAdj.innerHTML = `<i data-lucide="loader-2" class="spin"></i> Compiling Godot Combat Sequence...`;
+    if (window.lucide) window.lucide.createIcons();
 
     try {
-      combatStatusBadge.textContent = 'Adjudicating with 3 AIs...';
-      combatStatusBadge.className = 'panel-badge live';
-
-      const response = await adminFetch('/api/admin/execute-match', {
+      const res = await adminFetch('/api/admin/manual-adjudicate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          submission_a_id: selectedSubA.submission_id,
-          submission_b_id: selectedSubB.submission_id
-        })
+        body: JSON.stringify(payload)
       });
 
-      const resData = await response.json();
-      if (!response.ok) throw new Error(resData.error || 'Adjudication failed');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Manual adjudication failed');
 
-      finishStepperAnim();
+      currentGodotSequence = data.godot_sequence;
+      renderGodotTimeline(currentGodotSequence);
 
-      if (resData.match && resData.match.evaluation) {
-        renderMatchResult(resData.match, resData.execution ? resData.execution.result : null);
-        if (window.confetti) {
-          window.confetti({ particleCount: 100, spread: 90, origin: { y: 0.6 } });
-        }
+      if (window.confetti) {
+        window.confetti({ particleCount: 100, spread: 90, origin: { y: 0.6 } });
       }
 
+      playSynthSfx('sfx_victory_fanfare');
+
+      // Scroll to Godot section
+      document.getElementById('godotExportSection').scrollIntoView({ behavior: 'smooth' });
+
+      // Clear selected players & refresh
       selectedSubA = null;
       selectedSubB = null;
       renderChips();
@@ -470,177 +498,98 @@ document.addEventListener('DOMContentLoaded', () => {
       loadMatchesHistory();
 
     } catch (err) {
-      combatStatusBadge.textContent = 'Adjudication Error';
-      alert('AI Execution Error: ' + err.message);
-      resetStepper();
+      alert('Error: ' + err.message);
+    } finally {
+      btnRunManualAdj.disabled = false;
+      btnRunManualAdj.innerHTML = `<i data-lucide="play"></i> Generate AI Godot Combat Sequence & Record Match`;
+      if (window.lucide) window.lucide.createIcons();
     }
   });
 
-  btnExecuteSequence.addEventListener('click', async () => {
-    const activeQueued = queuedSubmissions.filter(s => s.status === 'queued');
-    if (activeQueued.length < 2) {
-      alert(`At least 2 queued players are required to run a sequence tournament! (Currently have ${activeQueued.length})`);
-      return;
-    }
+  // ==========================================================================
+  // SECTION 5: GODOT TIMELINE RENDERING & JSON EXPORT
+  // ==========================================================================
+  function renderGodotTimeline(seq) {
+    if (!seq || !seq.timeline) return;
 
-    if (!confirm(`Run tournament rounds for all ${activeQueued.length} queued players in sequential order?`)) return;
+    godotRawJsonDisplay.textContent = JSON.stringify(seq, null, 2);
 
-    document.getElementById('liveCombatSection').scrollIntoView({ behavior: 'smooth' });
-    startStepperAnim();
-
-    try {
-      combatStatusBadge.textContent = 'Sequencing Tournament Rounds...';
-      const response = await adminFetch('/api/admin/execute-sequence', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
-      });
-
-      const resData = await response.json();
-      if (!response.ok) throw new Error(resData.error || 'Sequence failed');
-
-      finishStepperAnim();
-
-      if (resData.matches && resData.matches.length > 0) {
-        renderMatchResult(resData.matches[resData.matches.length - 1]);
-        if (window.confetti) {
-          window.confetti({ particleCount: 120, spread: 100, origin: { y: 0.6 } });
-        }
-      }
-
-      selectedSubA = null;
-      selectedSubB = null;
-      renderChips();
-      loadSubmissions();
-      loadPlayers();
-      loadMatchesHistory();
-
-    } catch (err) {
-      combatStatusBadge.textContent = 'Sequence Error';
-      alert('Sequence Execution Error: ' + err.message);
-      resetStepper();
-    }
-  });
-
-  function startStepperAnim() {
-    aiStepper.style.display = 'flex';
-    matchResultView.style.display = 'none';
-
-    step1.className = 'stepper-step active';
-    step2.className = 'stepper-step';
-    step3.className = 'stepper-step';
-
-    setTimeout(() => {
-      step1.className = 'stepper-step done';
-      step2.className = 'stepper-step active';
-    }, 900);
-
-    setTimeout(() => {
-      step2.className = 'stepper-step done';
-      step3.className = 'stepper-step active';
-    }, 1800);
-  }
-
-  function finishStepperAnim() {
-    step1.className = 'stepper-step done';
-    step2.className = 'stepper-step done';
-    step3.className = 'stepper-step done';
-  }
-
-  function resetStepper() {
-    aiStepper.style.display = 'none';
-  }
-
-  function renderMatchResult(match, execDetails) {
-    const evalData = match.evaluation || {};
-    combatStatusBadge.textContent = `Match Completed: ${match.match_id}`;
-    combatStatusBadge.className = 'panel-badge live';
-
-    matchResultView.style.display = 'block';
-
-    // Summary
-    resWinnerName.textContent = evalData.winner_name || match.winner_name || 'Match Complete';
-    resWinReason.textContent = evalData.win_reason || 'Tactical superiority established.';
-    resMvpCombo.textContent = `MVP Combo: ${evalData.mvp_combo || evalData.mvp_card_combo || 'Tactical Coordination'}`;
-
-    // Player comparison
-    const pAName = match.player_a ? match.player_a.name : 'Player A';
-    const pBName = match.player_b ? match.player_b.name : 'Player B';
-    resPlayerAName.textContent = pAName;
-    resPlayerBName.textContent = pBName;
-
-    const scoreA = evalData.player_a_score ? evalData.player_a_score.total_score : (match.player_a_score || 0);
-    const scoreB = evalData.player_b_score ? evalData.player_b_score.total_score : (match.player_b_score || 0);
-    resScoreA.textContent = `${scoreA} PTS`;
-    resScoreB.textContent = `${scoreB} PTS`;
-
-    const synA = evalData.player_a_score ? (evalData.player_a_score.synergy_score || 70) : 70;
-    const synB = evalData.player_b_score ? (evalData.player_b_score.synergy_score || 70) : 70;
-    resSynergyValA.textContent = `${synA}%`;
-    resSynergyValB.textContent = `${synB}%`;
-    resSynergyFillA.style.width = `${synA}%`;
-    resSynergyFillB.style.width = `${synB}%`;
-
-    // Loadouts
-    const pAAtks = (match.player_a.attack_cards || []).map(id => `<span class="card-tag atk">${escapeHtml(getCardName(id))}</span>`).join(' ');
-    const pADefs = (match.player_a.defence_cards || []).map(id => `<span class="card-tag def">${escapeHtml(getCardName(id))}</span>`).join(' ');
-    resLoadoutA.innerHTML = `${pAAtks} ${pADefs}`;
-
-    const pBAtks = (match.player_b.attack_cards || []).map(id => `<span class="card-tag atk">${escapeHtml(getCardName(id))}</span>`).join(' ');
-    const pBDefs = (match.player_b.defence_cards || []).map(id => `<span class="card-tag def">${escapeHtml(getCardName(id))}</span>`).join(' ');
-    resLoadoutB.innerHTML = `${pBAtks} ${pBDefs}`;
-
-    // Tactical sequences
-    resSeqTitleA.textContent = `${pAName}'s Execution Sequence`;
-    resSeqTitleB.textContent = `${pBName}'s Execution Sequence`;
-
-    const execAAtk = (execDetails && execDetails.player_a_attack_sequence) ? execDetails.player_a_attack_sequence : [];
-    const execADef = (execDetails && execDetails.player_a_defence_sequence) ? execDetails.player_a_defence_sequence : [];
-    const execBAtk = (execDetails && execDetails.player_b_attack_sequence) ? execDetails.player_b_attack_sequence : [];
-    const execBDef = (execDetails && execDetails.player_b_defence_sequence) ? execDetails.player_b_defence_sequence : [];
-
-    function formatSequenceList(atkSeq, defSeq, pObj) {
-      let html = '';
-      if (atkSeq.length > 0) {
-        atkSeq.forEach(act => {
-          html += `<div style="padding:4px 8px; background:rgba(255,94,0,0.1); border-radius:4px;"><strong>Step ${act.order}:</strong> ${escapeHtml(getCardName(act.card_id))} &rarr; <em>${escapeHtml(act.target)}</em> (${escapeHtml(act.reason)})</div>`;
-        });
-      } else {
-        (pObj.attack_cards || []).forEach((cid, i) => {
-          html += `<div style="padding:4px 8px; background:rgba(255,94,0,0.1); border-radius:4px;"><strong>Action ${i+1}:</strong> Execute ${escapeHtml(getCardName(cid))}</div>`;
-        });
-      }
-
-      if (defSeq.length > 0) {
-        defSeq.forEach(act => {
-          html += `<div style="padding:4px 8px; background:rgba(0,242,255,0.1); border-radius:4px;"><strong>Reaction ${act.order}:</strong> ${escapeHtml(getCardName(act.card_id))} &rarr; <em>${escapeHtml(act.target)}</em> (${escapeHtml(act.reason)})</div>`;
-        });
-      } else {
-        (pObj.defence_cards || []).forEach((cid, i) => {
-          html += `<div style="padding:4px 8px; background:rgba(0,242,255,0.1); border-radius:4px;"><strong>Reaction ${i+1}:</strong> Deploy ${escapeHtml(getCardName(cid))}</div>`;
-        });
-      }
-      return html;
-    }
-
-    resSequenceListA.innerHTML = formatSequenceList(execAAtk, execADef, match.player_a);
-    resSequenceListB.innerHTML = formatSequenceList(execBAtk, execBDef, match.player_b);
-
-    // Commentary & Combat Logs
-    resCommentaryText.textContent = evalData.play_by_play_commentary || 'Both players executed high-tempo rounds with strategic utility usage.';
-    if (evalData.combat_log && evalData.combat_log.length > 0) {
-      resCombatLogs.innerHTML = evalData.combat_log.map(log => `
-        <div class="combat-log-item">${escapeHtml(log)}</div>
-      `).join('');
-    } else {
-      resCombatLogs.innerHTML = `<div class="combat-log-item">${escapeHtml(evalData.tactical_breakdown || 'Combat complete.')}</div>`;
-    }
+    godotTimelineList.innerHTML = `
+      <div class="godot-timeline-header-card">
+        <div class="godot-meta-left">
+          <span class="godot-badge">🏆 Winner: ${escapeHtml(seq.winner_name)} (${seq.player_a_score}-${seq.player_b_score})</span>
+          <h3 style="margin-top:4px; font-size:1.1rem; color:#ffd700;">MVP: ${escapeHtml(seq.mvp_combo)}</h3>
+          <p style="color:var(--text-muted); font-size:0.85rem;">${escapeHtml(seq.win_reason)}</p>
+        </div>
+        <div class="godot-meta-right">
+          <div style="font-family:var(--font-mono); font-size:0.85rem; color:#00f2ff;">⏱️ Total Duration: ${seq.total_duration_sec}s</div>
+          <div style="font-family:var(--font-mono); font-size:0.85rem; color:var(--text-muted);">${seq.timeline.length} Keyframe Events</div>
+        </div>
+      </div>
+      <div class="godot-steps-list">
+        ${seq.timeline.map((step, idx) => {
+          const isPlayerA = step.actor === 'player_a';
+          const actorBadgeColor = isPlayerA ? '#00f2ff' : '#ff5e00';
+          return `
+            <div class="godot-step-row ${isPlayerA ? 'actor-a' : 'actor-b'}">
+              <div class="step-time-col">
+                <span class="step-badge">#${step.step}</span>
+                <span class="step-timestamp">${step.timestamp_sec.toFixed(1)}s</span>
+              </div>
+              <div class="step-content-col">
+                <div class="step-actor-line">
+                  <strong style="color:${actorBadgeColor};">${isPlayerA ? 'PLAYER A' : 'PLAYER B'} (${escapeHtml(step.character_name || step.character_id)})</strong>
+                  <span class="action-type-tag">${escapeHtml(step.action_type)}</span>
+                  ${step.emote_trigger ? `<span class="emote-active-tag">🎭 ${escapeHtml(step.emote_trigger)}</span>` : ''}
+                </div>
+                <p class="step-commentary">${escapeHtml(step.commentary)}</p>
+                <div class="step-godot-tags">
+                  <code>Trigger: ${escapeHtml(step.animation_trigger)}</code>
+                  ${step.sound_cue ? `<code>SFX: ${escapeHtml(step.sound_cue)}</code>` : ''}
+                  ${step.damage_dealt ? `<code style="color:#ef4444;">💥 -${step.damage_dealt} HP</code>` : ''}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
 
     if (window.lucide) window.lucide.createIcons();
   }
 
+  btnCopyGodotJson.addEventListener('click', () => {
+    if (!currentGodotSequence) {
+      alert('Please adjudicate a match first to generate the Godot sequence!');
+      return;
+    }
+    const jsonStr = JSON.stringify(currentGodotSequence, null, 2);
+    navigator.clipboard.writeText(jsonStr).then(() => {
+      alert('✓ Godot Timeline JSON copied to clipboard! Ready to paste into Godot.');
+    }).catch(() => {
+      alert('Failed to copy. Please expand the Raw JSON box below and copy manually.');
+    });
+  });
+
+  btnDownloadGodotJson.addEventListener('click', () => {
+    if (!currentGodotSequence) {
+      alert('Please adjudicate a match first to generate the Godot sequence!');
+      return;
+    }
+    const jsonStr = JSON.stringify(currentGodotSequence, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `godot_match_sequence_${currentGodotSequence.match_id || 'latest'}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
   // ==========================================================================
-  // SECTION 5: DEDICATED PLAYER DATABASE & LEADERBOARD
+  // SECTION 6: DEDICATED PLAYERS LEADERBOARD
   // ==========================================================================
   async function loadPlayers() {
     try {
@@ -685,7 +634,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================================================
-  // SECTION 6: MATCHES HISTORY ARCHIVE
+  // SECTION 7: MATCHES HISTORY ARCHIVE
   // ==========================================================================
   async function loadMatchesHistory() {
     try {
@@ -727,6 +676,9 @@ document.addEventListener('DOMContentLoaded', () => {
               <button class="btn btn-secondary btn-xs" onclick="window.viewMatchDetails('${escapeHtml(m.match_id)}')">
                 <i data-lucide="eye"></i> View
               </button>
+              <button class="btn btn-secondary btn-xs" onclick="window.loadMatchGodotSequence('${escapeHtml(m.match_id)}')" title="Load in Godot Timeline view">
+                <i data-lucide="gamepad-2"></i> Godot
+              </button>
             </td>
           </tr>
         `;
@@ -738,6 +690,19 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Failed to load matches history:', e);
     }
   }
+
+  window.loadMatchGodotSequence = async function(matchId) {
+    try {
+      const res = await fetch(`/api/matches/${matchId}/godot-sequence`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to load sequence');
+      currentGodotSequence = data;
+      renderGodotTimeline(data);
+      document.getElementById('godotExportSection').scrollIntoView({ behavior: 'smooth' });
+    } catch (err) {
+      alert('Error loading Godot sequence: ' + err.message);
+    }
+  };
 
   window.viewMatchDetails = function(matchId) {
     const match = storedMatches.find(m => m.match_id === matchId);
@@ -778,7 +743,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Refresh All
   btnRefreshAll.addEventListener('click', () => {
-    loadApiKeys();
     loadSubmissions();
     loadPlayers();
     loadMatchesHistory();
@@ -795,17 +759,22 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/'/g, '&#39;');
   }
 
-  // Initial Load
-  fetchCards().then(() => {
-    loadApiKeys();
-    loadSubmissions();
-    loadPlayers();
-    loadMatchesHistory();
-  });
+  function initializeAdminData() {
+    fetchCards().then(() => {
+      loadSubmissions();
+      loadPlayers();
+      loadMatchesHistory();
+    });
+  }
 
-  // Auto-polling for new web submissions every 5 seconds
+  // Check gate upon load
+  checkSecurityGate();
+
+  // Auto-polling for new submissions every 5 seconds
   setInterval(() => {
-    loadSubmissions();
+    if (getAdminToken() === CORRECT_PASSCODE) {
+      loadSubmissions();
+    }
   }, 5000);
 
 });
