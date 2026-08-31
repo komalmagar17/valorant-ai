@@ -1,9 +1,9 @@
 # ==============================================================================
 # Character2D.gd
 # ==============================================================================
-# Controls 2D visual character rendering with SpriteSheet keyframe animation,
-# combat movements, health display, damage popups, and full emote suites.
-# Compatible with Godot 4.x / 3.x.
+# Controls 2D visual character rendering in Godot with SpriteSheet keyframe
+# animations, combat movement tweening, dual-layer health bars, damage popups,
+# tactical card callout banners, and full emote suites.
 # ==============================================================================
 
 extends Node2D
@@ -18,22 +18,29 @@ var current_hp: float = 100.0
 var max_shield: float = 50.0
 var current_shield: float = 50.0
 
+@onready var sprite_anchor: Node2D = $SpriteAnchor
 @onready var sprite: Sprite2D = $SpriteAnchor/CharacterSprite if has_node("SpriteAnchor/CharacterSprite") else null
 @onready var name_label: Label = $UI/NameLabel
 @onready var hp_bar: ProgressBar = $UI/HealthBar
+@onready var hp_ghost_bar: ProgressBar = $UI/HealthGhostBar if has_node("UI/HealthGhostBar") else null
 @onready var shield_bar: ProgressBar = $UI/ShieldBar
 @onready var emote_bubble: PanelContainer = $UI/EmoteBubble
 @onready var emote_label: Label = $UI/EmoteBubble/EmoteLabel
+@onready var card_badge: PanelContainer = $UI/CardCallout if has_node("UI/CardCallout") else null
+@onready var card_badge_label: Label = $UI/CardCallout/CardLabel if has_node("UI/CardCallout/CardLabel") else null
 @onready var damage_popup_anchor: Node2D = $DamagePopupAnchor
 
 var base_pos: Vector2 = Vector2.ZERO
 var anim_tween: Tween = null
+var ghost_tween: Tween = null
 
 func _ready() -> void:
 	base_pos = position
 	if emote_bubble:
 		emote_bubble.visible = false
-	update_ui()
+	if card_badge:
+		card_badge.visible = false
+	update_ui(false)
 	_set_sprite_row(0) # Idle row
 
 func setup_character(id: String, c_name: String, p_name: String) -> void:
@@ -51,12 +58,23 @@ func reset_stats() -> void:
 	modulate = Color.WHITE
 	if emote_bubble:
 		emote_bubble.visible = false
+	if card_badge:
+		card_badge.visible = false
 	_set_sprite_row(0)
-	update_ui()
+	update_ui(false)
 
-func update_ui() -> void:
+func update_ui(animate_ghost: bool = true) -> void:
 	if hp_bar:
 		hp_bar.value = current_hp
+	if hp_ghost_bar:
+		if animate_ghost:
+			if ghost_tween and ghost_tween.is_valid():
+				ghost_tween.kill()
+			ghost_tween = create_tween()
+			ghost_tween.tween_interval(0.2)
+			ghost_tween.tween_property(hp_ghost_bar, "value", current_hp, 0.4).set_trans(Tween.TRANS_SINE)
+		else:
+			hp_ghost_bar.value = current_hp
 	if shield_bar:
 		shield_bar.value = current_shield
 
@@ -80,13 +98,42 @@ func _cycle_sprite_frames(row_idx: int, frame_count: int = 8, speed: float = 0.0
 	anim_tween.tween_callback(func(): _set_sprite_row(0)).set_delay(speed) # Return to idle
 
 # ------------------------------------------------------------------------------
+# CARD CALLOUT BANNER
+# ------------------------------------------------------------------------------
+
+func show_card_callout(card_name: String, action_type: String) -> void:
+	if not card_badge or not card_badge_label or card_name == "":
+		return
+	
+	var is_attack = action_type.contains("attack") or action_type.contains("strike") or action_type.contains("slash")
+	var prefix = "⚔️ ATTACK: " if is_attack else "🛡️ DEFENCE: "
+	card_badge_label.text = prefix + card_name
+	
+	var badge_color = Color(1.0, 0.25, 0.25) if is_attack else Color(0.1, 0.85, 1.0)
+	card_badge_label.modulate = badge_color
+	
+	card_badge.visible = true
+	card_badge.scale = Vector2(0.6, 0.6)
+	card_badge.modulate = Color.TRANSPARENT
+	
+	var tween = create_tween()
+	tween.tween_property(card_badge, "modulate", Color.WHITE, 0.15)
+	tween.parallel().tween_property(card_badge, "scale", Vector2(1.0, 1.0), 0.15).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_interval(1.8)
+	tween.tween_property(card_badge, "modulate", Color.TRANSPARENT, 0.25)
+	tween.tween_callback(func(): card_badge.visible = false)
+
+# ------------------------------------------------------------------------------
 # COMBAT ACTION ANIMATIONS
 # ------------------------------------------------------------------------------
 
-func play_action(action_type: String, anim_trigger: String, damage: int = 0) -> void:
+func play_action(action_type: String, anim_trigger: String, damage: int = 0, card_name: String = "") -> void:
+	if card_name != "":
+		show_card_callout(card_name, action_type)
+	
 	match anim_trigger:
 		"anim_cast_slash", "anim_cast_slam", "anim_cast_cannon", "anim_cast_teleport":
-			_anim_attack_dash()
+			_anim_attack_dash(anim_trigger == "anim_cast_teleport")
 		"anim_deploy_barrier", "anim_deploy_smoke", "anim_parry_stance":
 			_anim_defence_barrier()
 		"anim_dodge_roll":
@@ -100,31 +147,41 @@ func play_action(action_type: String, anim_trigger: String, damage: int = 0) -> 
 		_:
 			_set_sprite_row(0)
 
-func _anim_attack_dash() -> void:
-	_cycle_sprite_frames(1, 8, 0.06, 1)
+func _anim_attack_dash(is_teleport: bool = false) -> void:
+	_cycle_sprite_frames(1, 8, 0.05, 1)
 	var target_dir = 1.0 if is_player_a else -1.0
+	var dash_dist = 180.0 if is_teleport else 130.0
+	
 	var tween = create_tween()
-	tween.tween_property(self, "position:x", base_pos.x + (140.0 * target_dir), 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tween.tween_property(self, "position:x", base_pos.x, 0.3).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	if is_teleport:
+		tween.tween_property(self, "modulate:a", 0.3, 0.08)
+		tween.parallel().tween_property(self, "position:x", base_pos.x + (dash_dist * target_dir), 0.15).set_trans(Tween.TRANS_EXPO)
+		tween.tween_property(self, "modulate:a", 1.0, 0.08)
+	else:
+		tween.tween_property(self, "position:x", base_pos.x + (dash_dist * target_dir), 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	
+	tween.tween_property(self, "position:x", base_pos.x, 0.25).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 func _anim_defence_barrier() -> void:
 	_cycle_sprite_frames(2 if character_id == "char_sol_vanguard" else 0, 8, 0.08, 1)
 	var tween = create_tween()
-	var barrier_color = Color(0, 0.95, 1.0, 1.0) if is_player_a else Color(1.0, 0.4, 0.0, 1.0)
-	tween.tween_property(self, "modulate", barrier_color * 1.5, 0.2)
-	tween.tween_property(self, "scale", Vector2(1.15, 1.15), 0.2)
-	tween.tween_property(self, "modulate", Color.WHITE, 0.4)
-	tween.parallel().tween_property(self, "scale", Vector2(1.0, 1.0), 0.4)
+	var barrier_color = Color(0.0, 0.95, 1.0, 1.0) if is_player_a else Color(1.0, 0.5, 0.0, 1.0)
+	tween.tween_property(self, "modulate", barrier_color * 1.6, 0.15)
+	tween.parallel().tween_property(self, "scale", Vector2(1.15, 1.15), 0.15)
+	tween.tween_property(self, "modulate", Color.WHITE, 0.35)
+	tween.parallel().tween_property(self, "scale", Vector2(1.0, 1.0), 0.35)
 	_spawn_floating_text("🛡️ DEFENCE ACTIVE", barrier_color)
 
 func _anim_dodge() -> void:
 	_cycle_sprite_frames(2, 8, 0.05, 1)
 	var tween = create_tween()
-	tween.tween_property(self, "position:y", base_pos.y - 60.0, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.tween_property(self, "position:y", base_pos.y, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	_spawn_floating_text("💨 DODGE", Color.YELLOW)
+	tween.tween_property(self, "position:y", base_pos.y - 70.0, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(self, "rotation_degrees", 15.0 if is_player_a else -15.0, 0.18)
+	tween.tween_property(self, "position:y", base_pos.y, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(self, "rotation_degrees", 0.0, 0.18)
+	_spawn_floating_text("💨 EVASION", Color.YELLOW)
 
-func apply_damage(amount: int) -> void:
+func apply_damage(amount: int, is_critical: bool = false) -> void:
 	if amount <= 0:
 		return
 	if current_shield > 0:
@@ -132,31 +189,36 @@ func apply_damage(amount: int) -> void:
 		current_shield -= shield_absorb
 		amount -= int(shield_absorb)
 	current_hp = max(0.0, current_hp - float(amount))
-	update_ui()
-	_anim_hit_reaction(amount)
+	update_ui(true)
+	_anim_hit_reaction(amount, is_critical)
 
-func _anim_hit_reaction(amount: int) -> void:
+func _anim_hit_reaction(amount: int, is_critical: bool = false) -> void:
 	var tween = create_tween()
-	tween.tween_property(self, "modulate", Color.RED, 0.1)
+	var flash_color = Color(1.0, 0.1, 0.1, 1.0) if is_critical else Color(1.0, 0.4, 0.4, 1.0)
+	tween.tween_property(self, "modulate", flash_color, 0.08)
 	var dir = -1.0 if is_player_a else 1.0
-	tween.parallel().tween_property(self, "position:x", base_pos.x + (25.0 * dir), 0.1)
-	tween.tween_property(self, "modulate", Color.WHITE, 0.25)
-	tween.parallel().tween_property(self, "position:x", base_pos.x, 0.25)
-	_spawn_floating_text("💥 -%d HP" % amount, Color(1.0, 0.2, 0.2, 1.0))
+	var knockback = 45.0 if is_critical else 22.0
+	tween.parallel().tween_property(self, "position:x", base_pos.x + (knockback * dir), 0.08)
+	tween.tween_property(self, "modulate", Color.WHITE, 0.2)
+	tween.parallel().tween_property(self, "position:x", base_pos.x, 0.2)
+	
+	var label_text = "⚡ CRITICAL -%d HP!" % amount if is_critical else "-%d HP" % amount
+	var text_color = Color(1.0, 0.85, 0.1, 1.0) if is_critical else Color(1.0, 0.25, 0.25, 1.0)
+	_spawn_floating_text(label_text, text_color, is_critical)
 
 func _anim_victory() -> void:
 	_cycle_sprite_frames(3, 8, 0.1, 3)
 	var tween = create_tween().set_loops(3)
-	tween.tween_property(self, "position:y", base_pos.y - 40.0, 0.25).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.tween_property(self, "position:y", base_pos.y, 0.25).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	_spawn_floating_text("🏆 VICTORY!", Color(1.0, 0.85, 0.0, 1.0))
+	tween.tween_property(self, "position:y", base_pos.y - 45.0, 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(self, "position:y", base_pos.y, 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	_spawn_floating_text("🏆 VICTORY!", Color(1.0, 0.9, 0.1, 1.0), true)
 
 func _anim_defeat() -> void:
 	var row = 7 if character_id == "char_phantom_9" else 8
 	_cycle_sprite_frames(row, 8, 0.1, 1)
 	var tween = create_tween()
-	tween.tween_property(self, "position:y", base_pos.y + 35.0, 0.5).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
-	tween.parallel().tween_property(self, "modulate", Color(0.5, 0.5, 0.5, 0.7), 0.5)
+	tween.tween_property(self, "position:y", base_pos.y + 35.0, 0.4).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(self, "modulate", Color(0.4, 0.4, 0.5, 0.7), 0.4)
 	_spawn_floating_text("💔 DEFEATED", Color(0.8, 0.3, 0.3, 1.0))
 
 # ------------------------------------------------------------------------------
@@ -213,21 +275,24 @@ func _show_bubble(text: String) -> void:
 	emote_label.text = text
 	emote_bubble.visible = true
 	emote_bubble.modulate = Color.TRANSPARENT
+	emote_bubble.scale = Vector2(0.7, 0.7)
+	
 	var tween = create_tween()
-	tween.tween_property(emote_bubble, "modulate", Color.WHITE, 0.2)
+	tween.tween_property(emote_bubble, "modulate", Color.WHITE, 0.15)
+	tween.parallel().tween_property(emote_bubble, "scale", Vector2(1.0, 1.0), 0.15).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tween.tween_interval(2.2)
-	tween.tween_property(emote_bubble, "modulate", Color.TRANSPARENT, 0.3)
+	tween.tween_property(emote_bubble, "modulate", Color.TRANSPARENT, 0.25)
 	tween.tween_callback(func(): emote_bubble.visible = false)
 
-func _spawn_floating_text(text: String, color: Color) -> void:
+func _spawn_floating_text(text: String, color: Color, is_big: bool = false) -> void:
 	var label = Label.new()
 	label.text = text
 	label.modulate = color
-	label.add_theme_font_size_override("font_size", 18)
-	label.position = Vector2(-50, -120)
+	label.add_theme_font_size_override("font_size", 22 if is_big else 16)
+	label.position = Vector2(-70, -135)
 	add_child(label)
 
 	var tween = create_tween()
-	tween.tween_property(label, "position:y", label.position.y - 45.0, 0.8).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(label, "position:y", label.position.y - (55.0 if is_big else 40.0), 0.8).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tween.parallel().tween_property(label, "modulate:a", 0.0, 0.8)
 	tween.tween_callback(label.queue_free)
