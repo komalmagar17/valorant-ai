@@ -1,8 +1,8 @@
 # ==============================================================================
 # Character2D.gd
 # ==============================================================================
-# Controls 2D visual character rendering, combat animations, health display,
-# floating damage text, and all emote triggers (Dance, Taunt, Celebrate, Flex, etc.).
+# Controls 2D visual character rendering with SpriteSheet keyframe animation,
+# combat movements, health display, damage popups, and full emote suites.
 # Compatible with Godot 4.x / 3.x.
 # ==============================================================================
 
@@ -18,7 +18,7 @@ var current_hp: float = 100.0
 var max_shield: float = 50.0
 var current_shield: float = 50.0
 
-@onready var sprite_anchor: Node2D = $SpriteAnchor
+@onready var sprite: Sprite2D = $SpriteAnchor/CharacterSprite if has_node("SpriteAnchor/CharacterSprite") else null
 @onready var name_label: Label = $UI/NameLabel
 @onready var hp_bar: ProgressBar = $UI/HealthBar
 @onready var shield_bar: ProgressBar = $UI/ShieldBar
@@ -27,12 +27,14 @@ var current_shield: float = 50.0
 @onready var damage_popup_anchor: Node2D = $DamagePopupAnchor
 
 var base_pos: Vector2 = Vector2.ZERO
+var anim_tween: Tween = null
 
 func _ready() -> void:
 	base_pos = position
 	if emote_bubble:
 		emote_bubble.visible = false
 	update_ui()
+	_set_sprite_row(0) # Idle row
 
 func setup_character(id: String, c_name: String, p_name: String) -> void:
 	character_id = id
@@ -49,6 +51,7 @@ func reset_stats() -> void:
 	modulate = Color.WHITE
 	if emote_bubble:
 		emote_bubble.visible = false
+	_set_sprite_row(0)
 	update_ui()
 
 func update_ui() -> void:
@@ -56,6 +59,25 @@ func update_ui() -> void:
 		hp_bar.value = current_hp
 	if shield_bar:
 		shield_bar.value = current_shield
+
+func _set_sprite_row(row_idx: int) -> void:
+	if sprite:
+		var h_frames = sprite.hframes if sprite.hframes > 0 else 8
+		sprite.frame = row_idx * h_frames
+
+func _cycle_sprite_frames(row_idx: int, frame_count: int = 8, speed: float = 0.08, loops: int = 1) -> void:
+	if not sprite:
+		return
+	var h_frames = sprite.hframes if sprite.hframes > 0 else 8
+	var start_f = row_idx * h_frames
+
+	if anim_tween and anim_tween.is_valid():
+		anim_tween.kill()
+
+	anim_tween = create_tween().set_loops(loops)
+	for i in range(frame_count):
+		anim_tween.tween_callback(func(): sprite.frame = start_f + i).set_delay(speed)
+	anim_tween.tween_callback(func(): _set_sprite_row(0)).set_delay(speed) # Return to idle
 
 # ------------------------------------------------------------------------------
 # COMBAT ACTION ANIMATIONS
@@ -76,17 +98,17 @@ func play_action(action_type: String, anim_trigger: String, damage: int = 0) -> 
 		"anim_victory":
 			_anim_victory()
 		_:
-			_anim_pulse()
+			_set_sprite_row(0)
 
 func _anim_attack_dash() -> void:
+	_cycle_sprite_frames(1, 8, 0.06, 1)
 	var target_dir = 1.0 if is_player_a else -1.0
 	var tween = create_tween()
-	tween.tween_property(self, "position:x", base_pos.x + (120.0 * target_dir), 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tween.tween_property(self, "rotation_degrees", 8.0 * target_dir, 0.15)
-	tween.tween_property(self, "position:x", base_pos.x, 0.35).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	tween.parallel().tween_property(self, "rotation_degrees", 0.0, 0.35)
+	tween.tween_property(self, "position:x", base_pos.x + (140.0 * target_dir), 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(self, "position:x", base_pos.x, 0.3).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 func _anim_defence_barrier() -> void:
+	_cycle_sprite_frames(2 if character_id == "char_sol_vanguard" else 0, 8, 0.08, 1)
 	var tween = create_tween()
 	var barrier_color = Color(0, 0.95, 1.0, 1.0) if is_player_a else Color(1.0, 0.4, 0.0, 1.0)
 	tween.tween_property(self, "modulate", barrier_color * 1.5, 0.2)
@@ -96,11 +118,10 @@ func _anim_defence_barrier() -> void:
 	_spawn_floating_text("🛡️ DEFENCE ACTIVE", barrier_color)
 
 func _anim_dodge() -> void:
+	_cycle_sprite_frames(2, 8, 0.05, 1)
 	var tween = create_tween()
 	tween.tween_property(self, "position:y", base_pos.y - 60.0, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.tween_property(self, "rotation_degrees", 360.0 * (1 if is_player_a else -1), 0.3)
 	tween.tween_property(self, "position:y", base_pos.y, 0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tween.tween_property(self, "rotation_degrees", 0.0, 0.05)
 	_spawn_floating_text("💨 DODGE", Color.YELLOW)
 
 func apply_damage(amount: int) -> void:
@@ -124,22 +145,19 @@ func _anim_hit_reaction(amount: int) -> void:
 	_spawn_floating_text("💥 -%d HP" % amount, Color(1.0, 0.2, 0.2, 1.0))
 
 func _anim_victory() -> void:
+	_cycle_sprite_frames(3, 8, 0.1, 3)
 	var tween = create_tween().set_loops(3)
 	tween.tween_property(self, "position:y", base_pos.y - 40.0, 0.25).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tween.tween_property(self, "position:y", base_pos.y, 0.25).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	_spawn_floating_text("🏆 VICTORY!", Color(1.0, 0.85, 0.0, 1.0))
 
 func _anim_defeat() -> void:
+	var row = 7 if character_id == "char_phantom_9" else 8
+	_cycle_sprite_frames(row, 8, 0.1, 1)
 	var tween = create_tween()
-	tween.tween_property(self, "position:y", base_pos.y + 40.0, 0.5).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
-	tween.parallel().tween_property(self, "rotation_degrees", -45.0 if is_player_a else 45.0, 0.5)
+	tween.tween_property(self, "position:y", base_pos.y + 35.0, 0.5).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
 	tween.parallel().tween_property(self, "modulate", Color(0.5, 0.5, 0.5, 0.7), 0.5)
 	_spawn_floating_text("💔 DEFEATED", Color(0.8, 0.3, 0.3, 1.0))
-
-func _anim_pulse() -> void:
-	var tween = create_tween()
-	tween.tween_property(self, "scale", Vector2(1.1, 1.1), 0.15)
-	tween.tween_property(self, "scale", Vector2(1.0, 1.0), 0.2)
 
 # ------------------------------------------------------------------------------
 # FULL EMOTE SUITE (Dance, Taunt, Celebrate, Flex, Salute, GG, Defeat)
@@ -165,48 +183,29 @@ func play_emote(emote_id: String) -> void:
 			_show_bubble("⚡ %s" % emote_id)
 
 func _emote_dance() -> void:
-	_show_bubble("🕺 CYBER BREAKDANCE!")
-	var tween = create_tween().set_loops(4)
-	tween.tween_property(self, "rotation_degrees", 20.0, 0.15)
-	tween.tween_property(self, "rotation_degrees", -20.0, 0.15)
-	tween.tween_property(self, "position:y", base_pos.y - 20.0, 0.15)
-	tween.tween_property(self, "position:y", base_pos.y, 0.15)
+	_show_bubble("🕺 CYBER BREAKDANCE!" if character_id == "char_phantom_9" else "🤖 TITAN ROBOT DANCE!")
+	_cycle_sprite_frames(4, 8, 0.08, 3)
 
 func _emote_taunt() -> void:
-	_show_bubble("🗡️ STEP FORWARD IF YOU DARE!")
-	var tween = create_tween()
-	var dir = 1.0 if is_player_a else -1.0
-	tween.tween_property(self, "position:x", base_pos.x + (50.0 * dir), 0.2)
-	tween.tween_property(self, "scale", Vector2(1.2, 1.2), 0.2)
-	tween.tween_interval(0.8)
-	tween.tween_property(self, "position:x", base_pos.x, 0.3)
-	tween.parallel().tween_property(self, "scale", Vector2(1.0, 1.0), 0.3)
+	_show_bubble("🗡️ STEP FORWARD IF YOU DARE!" if character_id == "char_phantom_9" else "🦍 CHEST THUMP ROAR!")
+	_cycle_sprite_frames(5, 8, 0.09, 2)
 
 func _emote_celebrate() -> void:
 	_show_bubble("🎉 CHAMPION STATUS!")
 	_anim_victory()
 
 func _emote_flex() -> void:
-	_show_bubble("💪 MOLTEN FORGE POWER!")
-	var tween = create_tween()
-	tween.tween_property(self, "scale", Vector2(1.3, 1.3), 0.3).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
-	tween.tween_property(self, "modulate", Color(1.0, 0.6, 0.1, 1.0), 0.2)
-	tween.tween_interval(0.6)
-	tween.tween_property(self, "scale", Vector2(1.0, 1.0), 0.3)
-	tween.parallel().tween_property(self, "modulate", Color.WHITE, 0.3)
+	_show_bubble("💪 BLASTER FLEX!" if character_id == "char_phantom_9" else "💥 MOLTEN BICEP FLEX!")
+	_cycle_sprite_frames(6, 8, 0.09, 2)
 
 func _emote_salute() -> void:
-	_show_bubble("🫡 HONORABLE COMBAT.")
-	var tween = create_tween()
-	tween.tween_property(self, "position:y", base_pos.y - 15.0, 0.2)
-	tween.tween_interval(0.8)
-	tween.tween_property(self, "position:y", base_pos.y, 0.2)
+	_show_bubble("🫡 HONORABLE WARRIOR SALUTE.")
+	var row = 7 if character_id == "char_sol_vanguard" else 0
+	_cycle_sprite_frames(row, 8, 0.1, 1)
 
 func _emote_gg() -> void:
 	_show_bubble("👋 RESPECT! GOOD GAME.")
-	var tween = create_tween().set_loops(3)
-	tween.tween_property(self, "rotation_degrees", 10.0, 0.15)
-	tween.tween_property(self, "rotation_degrees", 0.0, 0.15)
+	_cycle_sprite_frames(0, 8, 0.1, 2)
 
 func _show_bubble(text: String) -> void:
 	if not emote_bubble or not emote_label:
@@ -225,7 +224,7 @@ func _spawn_floating_text(text: String, color: Color) -> void:
 	label.text = text
 	label.modulate = color
 	label.add_theme_font_size_override("font_size", 18)
-	label.position = Vector2(-40, -100)
+	label.position = Vector2(-50, -120)
 	add_child(label)
 
 	var tween = create_tween()

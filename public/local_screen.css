@@ -325,9 +325,31 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 140px;
-  height: 200px;
+  width: 160px;
+  height: 220px;
   transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.phantom-sprite-box {
+  width: 140px;
+  height: 140px;
+  background-image: url('assets/phantom9_spritesheet.png');
+  background-size: 800% 800%;
+  background-position: 0% 0%;
+  image-rendering: pixelated;
+  z-index: 2;
+  filter: drop-shadow(0 0 15px rgba(0, 242, 255, 0.5));
+}
+
+.vanguard-sprite-box {
+  width: 140px;
+  height: 140px;
+  background-image: url('assets/solvanguard_spritesheet.png');
+  background-size: 800% 900%;
+  background-position: 0% 0%;
+  image-rendering: pixelated;
+  z-index: 2;
+  filter: drop-shadow(0 0 15px rgba(255, 94, 0, 0.5));
 }
 
 .actor-glow-aura {

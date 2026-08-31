@@ -1,7 +1,9 @@
-[gd_scene load_steps=3 format=3 uid="uid://c28n3f0q2d0v"]
+[gd_scene load_steps=5 format=3 uid="uid://c28n3f0q2d0v"]
 
 [ext_resource type="Script" path="res://MainCombatArena.gd" id="1_arena"]
 [ext_resource type="Script" path="res://Character2D.gd" id="2_char"]
+[ext_resource type="Texture2D" path="res://assets/phantom9_spritesheet.png" id="3_phantom"]
+[ext_resource type="Texture2D" path="res://assets/solvanguard_spritesheet.png" id="4_vanguard"]
 
 [node name="MainCombatArena" type="Node2D"]
 script = ExtResource("1_arena")
@@ -11,14 +13,14 @@ script = ExtResource("1_arena")
 [node name="Background" type="ColorRect" parent="."]
 offset_right = 1280.0
 offset_bottom = 720.0
-color = Color(0.05, 0.07, 0.1, 1)
+color = Color(0.04, 0.05, 0.08, 1)
 
 [node name="ArenaPlatform" type="ColorRect" parent="."]
 offset_left = 140.0
-offset_top = 460.0
+offset_top = 500.0
 offset_right = 1140.0
-offset_bottom = 480.0
-color = Color(0.12, 0.16, 0.22, 1)
+offset_bottom = 520.0
+color = Color(0.1, 0.14, 0.2, 1)
 
 [node name="PlatformGlow" type="ColorRect" parent="ArenaPlatform"]
 layout_mode = 0
@@ -27,7 +29,7 @@ offset_right = 1000.0
 color = Color(0.0, 0.95, 1.0, 0.6)
 
 [node name="PlayerA" type="Node2D" parent="."]
-position = Vector2(360, 420)
+position = Vector2(360, 440)
 script = ExtResource("2_char")
 character_id = "char_phantom_9"
 character_name = "PHANTOM-9"
@@ -35,66 +37,60 @@ is_player_a = true
 
 [node name="SpriteAnchor" type="Node2D" parent="PlayerA"]
 
-[node name="VisualAvatar" type="ColorRect" parent="PlayerA/SpriteAnchor"]
-offset_left = -30.0
-offset_top = -80.0
-offset_right = 30.0
-color = Color(0.0, 0.95, 1.0, 1)
-
-[node name="Visor" type="ColorRect" parent="PlayerA/SpriteAnchor/VisualAvatar"]
-layout_mode = 0
-offset_left = 10.0
-offset_top = 15.0
-offset_right = 50.0
-offset_bottom = 25.0
-color = Color(0.7, 0.2, 1.0, 1)
+[node name="CharacterSprite" type="Sprite2D" parent="PlayerA/SpriteAnchor"]
+position = Vector2(0, -60)
+scale = Vector2(0.85, 0.85)
+texture = ExtResource("3_phantom")
+hframes = 8
+vframes = 8
+frame = 0
 
 [node name="UI" type="Node2D" parent="PlayerA"]
 
 [node name="NameLabel" type="Label" parent="PlayerA/UI"]
-offset_left = -100.0
-offset_top = -140.0
-offset_right = 100.0
-offset_bottom = -115.0
-theme_override_font_sizes/font_size = 14
+offset_left = -120.0
+offset_top = -160.0
+offset_right = 120.0
+offset_bottom = -135.0
+theme_override_font_sizes/font_size = 15
 text = "Player A (PHANTOM-9)"
 horizontal_alignment = 1
 
 [node name="HealthBar" type="ProgressBar" parent="PlayerA/UI"]
-offset_left = -80.0
-offset_top = -110.0
-offset_right = 80.0
-offset_bottom = -98.0
+offset_left = -90.0
+offset_top = -130.0
+offset_right = 90.0
+offset_bottom = -118.0
 max_value = 100.0
 value = 100.0
 show_percentage = false
 
 [node name="ShieldBar" type="ProgressBar" parent="PlayerA/UI"]
-offset_left = -80.0
-offset_top = -94.0
-offset_right = 80.0
-offset_bottom = -86.0
+offset_left = -90.0
+offset_top = -114.0
+offset_right = 90.0
+offset_bottom = -106.0
 max_value = 50.0
 value = 50.0
 show_percentage = false
 
 [node name="EmoteBubble" type="PanelContainer" parent="PlayerA/UI"]
 visible = false
-offset_left = -110.0
-offset_top = -190.0
-offset_right = 110.0
-offset_bottom = -150.0
+offset_left = -120.0
+offset_top = -215.0
+offset_right = 120.0
+offset_bottom = -170.0
 
 [node name="EmoteLabel" type="Label" parent="PlayerA/UI/EmoteBubble"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 12
+theme_override_font_sizes/font_size = 13
 text = "Emote text"
 horizontal_alignment = 1
 
 [node name="DamagePopupAnchor" type="Node2D" parent="PlayerA"]
 
 [node name="PlayerB" type="Node2D" parent="."]
-position = Vector2(920, 420)
+position = Vector2(920, 440)
 script = ExtResource("2_char")
 character_id = "char_sol_vanguard"
 character_name = "SOL-VANGUARD"
@@ -102,59 +98,53 @@ is_player_a = false
 
 [node name="SpriteAnchor" type="Node2D" parent="PlayerB"]
 
-[node name="VisualAvatar" type="ColorRect" parent="PlayerB/SpriteAnchor"]
-offset_left = -40.0
-offset_top = -90.0
-offset_right = 40.0
-color = Color(1.0, 0.37, 0.0, 1)
-
-[node name="ArmorShield" type="ColorRect" parent="PlayerB/SpriteAnchor/VisualAvatar"]
-layout_mode = 0
-offset_left = 15.0
-offset_top = 20.0
-offset_right = 65.0
-offset_bottom = 70.0
-color = Color(1.0, 0.84, 0.0, 1)
+[node name="CharacterSprite" type="Sprite2D" parent="PlayerB/SpriteAnchor"]
+position = Vector2(0, -60)
+scale = Vector2(0.85, 0.85)
+texture = ExtResource("4_vanguard")
+hframes = 8
+vframes = 9
+frame = 0
 
 [node name="UI" type="Node2D" parent="PlayerB"]
 
 [node name="NameLabel" type="Label" parent="PlayerB/UI"]
-offset_left = -100.0
-offset_top = -140.0
-offset_right = 100.0
-offset_bottom = -115.0
-theme_override_font_sizes/font_size = 14
+offset_left = -120.0
+offset_top = -160.0
+offset_right = 120.0
+offset_bottom = -135.0
+theme_override_font_sizes/font_size = 15
 text = "Player B (SOL-VANGUARD)"
 horizontal_alignment = 1
 
 [node name="HealthBar" type="ProgressBar" parent="PlayerB/UI"]
-offset_left = -80.0
-offset_top = -110.0
-offset_right = 80.0
-offset_bottom = -98.0
+offset_left = -90.0
+offset_top = -130.0
+offset_right = 90.0
+offset_bottom = -118.0
 max_value = 100.0
 value = 100.0
 show_percentage = false
 
 [node name="ShieldBar" type="ProgressBar" parent="PlayerB/UI"]
-offset_left = -80.0
-offset_top = -94.0
-offset_right = 80.0
-offset_bottom = -86.0
+offset_left = -90.0
+offset_top = -114.0
+offset_right = 90.0
+offset_bottom = -106.0
 max_value = 50.0
 value = 50.0
 show_percentage = false
 
 [node name="EmoteBubble" type="PanelContainer" parent="PlayerB/UI"]
 visible = false
-offset_left = -110.0
-offset_top = -190.0
-offset_right = 110.0
-offset_bottom = -150.0
+offset_left = -120.0
+offset_top = -215.0
+offset_right = 120.0
+offset_bottom = -170.0
 
 [node name="EmoteLabel" type="Label" parent="PlayerB/UI/EmoteBubble"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 12
+theme_override_font_sizes/font_size = 13
 text = "Emote text"
 horizontal_alignment = 1
 
