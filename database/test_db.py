@@ -193,6 +193,62 @@ class TestDatabase(unittest.TestCase):
         self.assertEqual(sample_record["status"], "completed")
         self.assertIn("Agent_", sample_record["player_a"]["name"])
 
+    def test_username_availability_and_player_registry(self):
+        """Verify real-time username check and dedicated player table registration."""
+        # 1. New name should be available
+        self.assertTrue(db.check_username_available("Radiant_Ghost#01"))
+
+        # 2. Register player
+        player = db.register_player("Radiant_Ghost#01")
+        self.assertEqual(player["username"], "Radiant_Ghost#01")
+        self.assertEqual(player["matches_played"], 0)
+        self.assertEqual(player["total_score"], 0)
+
+        # 3. Same name (and case-insensitive) should now NOT be available
+        self.assertFalse(db.check_username_available("Radiant_Ghost#01"))
+        self.assertFalse(db.check_username_available("radiant_ghost#01"))
+        self.assertFalse(db.check_username_available("RADIANT_GHOST#01"))
+
+        # 4. Fetch player profile
+        profile = db.get_player_by_username("radiant_ghost#01")
+        self.assertIsNotNone(profile)
+        self.assertEqual(profile["username"], "Radiant_Ghost#01")
+
+        # 5. Update stats on win
+        db.update_player_match_stats("Radiant_Ghost#01", won=True, is_draw=False, score_earned=88)
+        updated = db.get_player_by_username("Radiant_Ghost#01")
+        self.assertEqual(updated["matches_played"], 1)
+        self.assertEqual(updated["wins"], 1)
+        self.assertEqual(updated["total_score"], 88)
+        self.assertEqual(updated["win_rate_pct"], 100.0)
+
+        # 6. Check leaderboard
+        leaderboard = db.get_all_players()
+        self.assertEqual(len(leaderboard), 1)
+        self.assertEqual(leaderboard[0]["username"], "Radiant_Ghost#01")
+
+    def test_concurrent_username_checks_and_registration(self):
+        """Simulates 100 simultaneous concurrent users checking and registering usernames."""
+        TOTAL = 100
+        registered = []
+        lock = threading.Lock()
+
+        def user_action(idx: int):
+            uname = f"UserAgent_{idx}#VAL"
+            # 1. Check availability
+            avail = db.check_username_available(uname)
+            if avail:
+                p = db.register_player(uname)
+                with lock:
+                    registered.append(p)
+
+        with ThreadPoolExecutor(max_workers=20) as executor:
+            list(executor.map(user_action, range(TOTAL)))
+
+        self.assertEqual(len(registered), TOTAL)
+        all_players = db.get_all_players(limit=200)
+        self.assertEqual(len(all_players), TOTAL)
+
 
 if __name__ == "__main__":
     unittest.main()

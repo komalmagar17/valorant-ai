@@ -46,8 +46,10 @@ database/*.db
 database/*.db-wal
 database/*.db-shm
 
-# IDEs
+# IDEs & Deployments
 .idea/
 .vscode/
 *.swp
 *.swo
+.vercel/
+

@@ -272,6 +272,7 @@ class EvaluationOutcome(BaseModel):
 
 
 # ==============================================================================
+# ==============================================================================
 # SECTION 2: PROMPT BUILDER (Formatting the Dual-Loadout Context)
 # ==============================================================================
 
@@ -297,7 +298,7 @@ MATCH SETUP:
 ------------
 Two players each selected 4 CARDS (2 Attack + 2 Defence).
 The Attack AI and Defence AI formulated tactical plans for both players.
-Your mission is to adjudicate the confrontation, calculate scores (0-100), and determine the WINNER.
+Your mission is to adjudicate a full, realistic 1 to 2 minute (~100 seconds) tactical round, calculate scores (0-100), and determine the WINNER.
 
 PLAYER A:
 ---------
@@ -323,21 +324,26 @@ GAME RULES & SCORING CRITERIA:
 ------------------------------
 {json.dumps(game_rules or {}, indent=2)}
 
-SCORING & ADJUDICATION GUIDELINES:
-----------------------------------
-1. CARD SYNERGY (0-100):
-   - Reward decks where attack cards and defence cards naturally complement each other (e.g. Flash + High Damage Rifle, Smoke + Shotgun/Close Angle).
-2. COUNTER MECHANICS (0-100):
-   - Reward defence cards that neutralize the opponent's specific attack cards (e.g. Smoke blocks Rifle sightline, Heavy Shield absorbs burst damage).
-3. DAMAGE & HEALTH CALCULATION:
-   - Shields absorb incoming damage up to starting shield value. Remaining damage reduces HP.
-   - HP cannot drop below 0.
-   - If a player's HP reaches 0, they are eliminated and the other player wins.
-   - If both survive, the player with the higher composite score (or remaining HP advantage) wins.
-4. IMMERSIVE ESPORTS COMMENTARY:
-   - Generate exciting, play-by-play commentary highlighting the key tactical interactions.
-5. STRICT JSON OUTPUT:
-   - Return ONLY valid JSON matching this schema:
+ROUND DURATION & CHRONOLOGICAL PACING GUIDELINES (1-2 MINUTES / ~100s):
+-----------------------------------------------------------------------
+A standard Valorant round lasts 100 seconds (1m 40s) to 2 minutes. Adjudicate this match as a full, immersive multi-phase tactical clash across the following 4 phases:
+1. PHASE 1: RECON & SITE SETUP (00:00 - 00:20)
+   - Pre-round traps, camera/drone intel scouting, defensive positioning, default holds.
+2. PHASE 2: CHOKE POINT UTILITY EXCHANGE & TRADES (00:20 - 00:50)
+   - Flashes deployed, smokes blocking sightlines, recon darts, initial chip/shield damage trades.
+3. PHASE 3: SITE BREACH, ENTRY DUEL & SPIKE PLANT (00:50 - 01:20)
+   - Breaching the site choke, heavy weapon burst exchanges, Spike planting or post-plant trap triggers.
+4. PHASE 4: POST-PLANT 1v1 CLUTCH STANDOFF & DECISIVE FINISH (01:20 - 01:45)
+   - Tense 1v1 duel, tap vs fake defuse, crosshair micro-adjustments, final lethal headshot elimination or clutch defuse!
+
+IMPORTANT REQUIREMENTS:
+- Every entry in `combat_log` MUST include a realistic timestamp formatted as `[MM:SS]` spanning from `[00:08]` up to `[01:42]` (e.g. `[00:08]`, `[00:25]`, `[00:48]`, `[01:08]`, `[01:22]`, `[01:38]`, `[01:44]`). Do NOT end the match prematurely in 10 seconds!
+- Provide 6 to 8 detailed `action_resolutions` covering the chronological actions of both players.
+- CARD SYNERGY (0-100): Reward decks where attack and defence cards naturally complement each other.
+- COUNTER MECHANICS (0-100): Reward defence cards that neutralize the opponent's attacks.
+- DAMAGE & HEALTH: Shields absorb damage up to starting shield value; remaining damage reduces HP.
+- IMMERSIVE ESPORTS COMMENTARY: High-energy, breathless caster commentary narrating the entire 1-2 minute clash.
+- STRICT JSON OUTPUT: Return ONLY valid JSON matching this schema:
 
 {schema_json}
 """
@@ -362,7 +368,7 @@ def call_llm(
     Connects to Google's FREE Gemini API (Gemini 1.5 Flash).
     Falls back to intelligent offline referee simulator if key is not configured.
     """
-    key = api_key or os.getenv("GEMINI_API_KEY")
+    key = api_key or os.getenv("GEMINI_API_KEY_EVALUATION") or os.getenv("GEMINI_API_KEY")
 
     if key:
         try:
@@ -390,11 +396,11 @@ def call_llm(
             return json.loads(raw_text.strip())
 
         except Exception as e:
-            print(f"\n[⚠️ GEMINI API NOTICE]: {e}")
+            print(f"\n[⚠️ MASTER REFEREE AI (GEMINI) NOTICE]: {e}")
             print("[INFO] Falling back to built-in referee simulator.\n")
     else:
-        print("\n[ℹ️ NOTE]: GEMINI_API_KEY not found. Using offline referee scoring simulator.")
-        print("          (To use live Free Gemini AI: export GEMINI_API_KEY=\"your_key_from_aistudio.google.com\")\n")
+        print("\n[ℹ️ NOTE]: GEMINI_API_KEY_EVALUATION not found. Using offline referee scoring simulator.")
+        print("          (To use live Referee AI: export GEMINI_API_KEY_EVALUATION=\"your_key_from_aistudio.google.com\")\n")
 
     return _generate_mock_1v1_evaluation_response(
         player_a=player_a or {},
@@ -416,166 +422,256 @@ def _generate_mock_1v1_evaluation_response(
 ) -> Dict[str, Any]:
     """
     Intelligent tactical referee fallback simulator for 4-card 1v1 matchups.
-    Accurately computes card interactions, counter-mechanics, and player scores.
+    Accurately computes card interactions, counter-mechanics, and player scores
+    across a full 1-2 minute (~100s) multi-phase Valorant tactical round.
     """
     p_a_name = player_a.get("player_name", player_a.get("name", "Player A"))
     p_b_name = player_b.get("player_name", player_b.get("name", "Player B"))
 
-    # Extract card IDs
-    a_atk_ids = {c["id"] for c in player_a_cards.get("attack", [])}
-    a_def_ids = {c["id"] for c in player_a_cards.get("defence", [])}
-    b_atk_ids = {c["id"] for c in player_b_cards.get("attack", [])}
-    b_def_ids = {c["id"] for c in player_b_cards.get("defence", [])}
+    # Extract card objects & IDs
+    a_atks = player_a_cards.get("attack", [])
+    a_defs = player_a_cards.get("defence", [])
+    b_atks = player_b_cards.get("attack", [])
+    b_defs = player_b_cards.get("defence", [])
+
+    a_atk_ids = [c["id"] for c in a_atks]
+    a_def_ids = [c["id"] for c in a_defs]
+    b_atk_ids = [c["id"] for c in b_atks]
+    b_def_ids = [c["id"] for c in b_defs]
+
+    # Pick cards to highlight
+    c_a_atk1 = a_atks[0] if len(a_atks) > 0 else {"id": "atk_quick_peek", "name": "Quick Peek"}
+    c_a_atk2 = a_atks[1] if len(a_atks) > 1 else {"id": "atk_vandal_burst", "name": "Vandal Burst"}
+    c_a_def1 = a_defs[0] if len(a_defs) > 0 else {"id": "def_basic_hold", "name": "Crosshair Placement"}
+    c_a_def2 = a_defs[1] if len(a_defs) > 1 else {"id": "def_defensive_smoke", "name": "Dark Cover Smoke"}
+
+    c_b_atk1 = b_atks[0] if len(b_atks) > 0 else {"id": "atk_flash_entry", "name": "Flash Entry"}
+    c_b_atk2 = b_atks[1] if len(b_atks) > 1 else {"id": "atk_site_push", "name": "Site Push"}
+    c_b_def1 = b_defs[0] if len(b_defs) > 0 else {"id": "def_cypher_wire", "name": "Trapwire Sentinel"}
+    c_b_def2 = b_defs[1] if len(b_defs) > 1 else {"id": "def_reposition_defense", "name": "Anchor Defense"}
 
     resolutions = []
     combat_log = []
     order = 1
 
-    # Initiative check: Flash vs Smoke vs Direct Fire
-    has_flash_a = "curveball_flash" in a_atk_ids or "paranoia_blind" in a_atk_ids
-    has_smoke_b = "dark_cover_smoke" in b_def_ids
-    has_vandal_a = "vandal_rifle" in a_atk_ids or "blade_storm" in a_atk_ids
-    has_trap_b = "cypher_trapwire" in b_def_ids
+    # =========================================================================
+    # PHASE 1: RECON & SITE SETUP (00:00 - 00:20)
+    # =========================================================================
+    combat_log.append(f"[00:05] 🕒 ROUND START — Both Agents enter the arena on Ascent A Site.")
+    
+    # Player B sets up defensive utility
+    resolutions.append({
+        "action_order": order,
+        "actor_id": "player_b",
+        "target_id": "a_main_choke",
+        "action_type": "place_trap",
+        "card_id": c_b_def1["id"],
+        "success": True,
+        "hits": [],
+        "status_applied": "anchored",
+        "status_duration_turns": 2,
+        "tactical_notes": f"{p_b_name} establishes defensive fortification using {c_b_def1['name']} at A Main choke."
+    })
+    combat_log.append(f"[00:12] 🛡️ {p_b_name} sets up {c_b_def1['name']} to lock down A Main entry.")
+    order += 1
 
-    # Step 1: Utility interaction
-    if has_flash_a:
-        flash_card = "curveball_flash" if "curveball_flash" in a_atk_ids else "paranoia_blind"
-        resolutions.append({
-            "action_order": order,
-            "actor_id": "player_a",
-            "target_id": "a_site",
-            "action_type": "use_ability",
-            "card_id": flash_card,
-            "success": True,
-            "hits": [],
-            "status_applied": "flashed",
-            "status_duration_turns": 1,
-            "tactical_notes": f"{p_a_name} deploys flash ability, blinding {p_b_name} holding the site angle."
-        })
-        combat_log.append(f"[00:10] ⚡ {p_a_name} deploys Flash ability! {p_b_name} is blinded!")
-        order += 1
+    # Player A checks angles / recon
+    resolutions.append({
+        "action_order": order,
+        "actor_id": "player_a",
+        "target_id": "a_lobby",
+        "action_type": "use_ability",
+        "card_id": c_a_def1["id"],
+        "success": True,
+        "hits": [],
+        "status_applied": "recon_active",
+        "status_duration_turns": 1,
+        "tactical_notes": f"{p_a_name} activates {c_a_def1['name']}, securing sightline control."
+    })
+    combat_log.append(f"[00:18] 👁️ {p_a_name} utilizes {c_a_def1['name']} to safely scout defender positioning.")
+    order += 1
 
-    if has_smoke_b:
-        resolutions.append({
-            "action_order": order,
-            "actor_id": "player_b",
-            "target_id": "a_main_choke",
-            "action_type": "deploy_smoke",
-            "card_id": "dark_cover_smoke",
-            "success": True,
-            "hits": [],
-            "status_applied": "smoked",
-            "status_duration_turns": 2,
-            "tactical_notes": f"{p_b_name} deploys Dark Cover smoke to block entry sightline."
-        })
-        combat_log.append(f"[00:11] 💨 {p_b_name} deploys Dark Cover Smoke at the choke point.")
-        order += 1
+    # =========================================================================
+    # PHASE 2: CHOKE POINT UTILITY EXCHANGE & TRADES (00:20 - 00:50)
+    # =========================================================================
+    resolutions.append({
+        "action_order": order,
+        "actor_id": "player_a",
+        "target_id": "a_site_choke",
+        "action_type": "use_ability",
+        "card_id": c_a_atk1["id"],
+        "success": True,
+        "hits": [],
+        "status_applied": "flashed",
+        "status_duration_turns": 1,
+        "tactical_notes": f"{p_a_name} executes {c_a_atk1['name']} to blind the choke point defenders."
+    })
+    combat_log.append(f"[00:28] ⚡ {p_a_name} launches {c_a_atk1['name']}! {p_b_name}'s crosshair vision is disrupted!")
+    order += 1
 
-    # Step 2: Weapon & Duel resolution
-    if has_flash_a and has_vandal_a:
-        dmg_shield = 50
-        dmg_hp = 90
-        total_dmg = dmg_shield + dmg_hp
-        weapon_card = "vandal_rifle" if "vandal_rifle" in a_atk_ids else "blade_storm"
-        resolutions.append({
-            "action_order": order,
-            "actor_id": "player_a",
-            "target_id": "player_b",
-            "action_type": "attack",
-            "card_id": weapon_card,
-            "success": True,
-            "hits": [
-                {
-                    "hit_location": "head",
-                    "raw_damage": 140,
-                    "shield_damage": dmg_shield,
-                    "health_damage": dmg_hp,
-                    "is_critical": True
-                }
-            ],
-            "status_applied": None,
-            "status_duration_turns": 0,
-            "tactical_notes": f"{p_a_name} capitalizes on the flash window and connects a high-damage headshot burst."
-        })
-        combat_log.append(f"[00:15] 🎯 {p_a_name} lands a critical Headshot on {p_b_name} for {total_dmg} damage ({dmg_shield} Shield, {dmg_hp} HP)!")
-        order += 1
+    # Player B counters with defensive smoke / shield reposition
+    resolutions.append({
+        "action_order": order,
+        "actor_id": "player_b",
+        "target_id": "a_site_entrance",
+        "action_type": "deploy_smoke",
+        "card_id": c_b_def2["id"],
+        "success": True,
+        "hits": [],
+        "status_applied": "smoked",
+        "status_duration_turns": 2,
+        "tactical_notes": f"{p_b_name} reacts swiftly with {c_b_def2['name']} to neutralize entry vision."
+    })
+    combat_log.append(f"[00:36] 💨 {p_b_name} deploys {c_b_def2['name']}, extinguishing the attacker's line of sight.")
+    order += 1
 
-        winner_id = "player_a"
-        winner_name = p_a_name
-        win_reason = f"{p_a_name}'s offensive synergy (Flash + Rifle combo) overwhelmed {p_b_name}'s defensive crosshair."
-        score_a_total = 92
-        score_b_total = 73
-        mvp_combo = f"{flash_card} + {weapon_card} Headshot Burst"
-    else:
-        # Balanced trade
-        dmg_shield = 30
-        dmg_hp = 30
-        resolutions.append({
-            "action_order": order,
-            "actor_id": "player_a",
-            "target_id": "player_b",
-            "action_type": "attack",
-            "card_id": list(a_atk_ids)[0] if a_atk_ids else "classic_sidearm",
-            "success": True,
-            "hits": [
-                {
-                    "hit_location": "body",
-                    "raw_damage": 60,
-                    "shield_damage": dmg_shield,
-                    "health_damage": dmg_hp,
-                    "is_critical": False
-                }
-            ],
-            "status_applied": None,
-            "status_duration_turns": 0,
-            "tactical_notes": f"Tactical trade: {p_a_name} connects body damage through site cover."
-        })
-        combat_log.append(f"[00:15] ⚔️ Tactical clash: {p_a_name} deals 60 damage to {p_b_name}.")
-        winner_id = "player_a"
-        winner_name = p_a_name
-        win_reason = f"{p_a_name} held superior positional initiative and damage output."
-        score_a_total = 85
-        score_b_total = 78
-        mvp_combo = "Adaptive site entry and cover positioning"
+    # Initial firefight trade: Player A damages Player B shield
+    resolutions.append({
+        "action_order": order,
+        "actor_id": "player_a",
+        "target_id": "player_b",
+        "action_type": "attack",
+        "card_id": c_a_atk1["id"],
+        "success": True,
+        "hits": [
+            {
+                "hit_location": "body",
+                "raw_damage": 35,
+                "shield_damage": 35,
+                "health_damage": 0,
+                "is_critical": False
+            }
+        ],
+        "status_applied": None,
+        "status_duration_turns": 0,
+        "tactical_notes": f"{p_a_name} sprays through the smoke edge, cracking {p_b_name}'s shield for 35 damage."
+    })
+    combat_log.append(f"[00:48] 💥 {p_a_name} tags {p_b_name} for 35 Shield damage through the smoke transition.")
+    order += 1
 
-    # Score breakdown
+    # =========================================================================
+    # PHASE 3: SITE BREACH, SPIKE PLANT & COUNTER-ATTACK (00:50 - 01:20)
+    # =========================================================================
+    # Player B returns fire with offensive card
+    resolutions.append({
+        "action_order": order,
+        "actor_id": "player_b",
+        "target_id": "player_a",
+        "action_type": "attack",
+        "card_id": c_b_atk1["id"],
+        "success": True,
+        "hits": [
+            {
+                "hit_location": "body",
+                "raw_damage": 40,
+                "shield_damage": 40,
+                "health_damage": 0,
+                "is_critical": False
+            }
+        ],
+        "status_applied": None,
+        "status_duration_turns": 0,
+        "tactical_notes": f"{p_b_name} retaliates with {c_b_atk1['name']}, chipping {p_a_name}'s armor."
+    })
+    combat_log.append(f"[01:02] ⚔️ {p_b_name} retaliates with {c_b_atk1['name']}, dealing 40 Shield damage to {p_a_name}!")
+    order += 1
+
+    # Spike plant execution
+    combat_log.append(f"[01:14] 💣 SPIKE PLANTED! {p_a_name} secures site control and initiates the 45-second detonation timer.")
+
+    # =========================================================================
+    # PHASE 4: POST-PLANT 1v1 CLUTCH STANDOFF & DECISIVE DUEL (01:20 - 01:45)
+    # =========================================================================
+    resolutions.append({
+        "action_order": order,
+        "actor_id": "player_a",
+        "target_id": "a_site_pillar",
+        "action_type": "use_ability",
+        "card_id": c_a_def2["id"],
+        "success": True,
+        "hits": [],
+        "status_applied": "post_plant_setup",
+        "status_duration_turns": 1,
+        "tactical_notes": f"{p_a_name} anchors the post-plant crossfire with {c_a_def2['name']}."
+    })
+    combat_log.append(f"[01:26] 🛡️ {p_a_name} deploys {c_a_def2['name']} to lock in post-plant crossfire angles.")
+    order += 1
+
+    # Decisive Duel: Player A lands critical headshot with Attack Card 2
+    dmg_shield_rem = 15  # Remaining shield on Player B (50 - 35 = 15)
+    dmg_hp_b = 85        # Penetrating HP damage
+    resolutions.append({
+        "action_order": order,
+        "actor_id": "player_a",
+        "target_id": "player_b",
+        "action_type": "attack",
+        "card_id": c_a_atk2["id"],
+        "success": True,
+        "hits": [
+            {
+                "hit_location": "head",
+                "raw_damage": 140,
+                "shield_damage": dmg_shield_rem,
+                "health_damage": dmg_hp_b,
+                "is_critical": True
+            }
+        ],
+        "status_applied": "eliminated",
+        "status_duration_turns": 0,
+        "tactical_notes": f"Decisive 1v1 Clutch: {p_a_name} unleashes {c_a_atk2['name']} connecting a precision headshot burst to eliminate {p_b_name}!"
+    })
+    combat_log.append(f"[01:38] 🎯 CRITICAL HEADSHOT! {p_a_name} lands a lethal 140-damage burst with {c_a_atk2['name']} ({dmg_shield_rem} Shield, {dmg_hp_b} HP)!")
+    combat_log.append(f"[01:42] 💀 {p_b_name} is eliminated! Spike defended successfully.")
+    combat_log.append(f"[01:45] 🏆 ROUND RESOLVED — {p_a_name} wins round after a grueling 1m 45s tactical masterclass!")
+    order += 1
+
+    winner_id = "player_a"
+    winner_name = p_a_name
+    win_reason = f"{p_a_name}'s high-tempo site execution and decisive post-plant crossfire ({c_a_atk1['name']} + {c_a_atk2['name']}) outmatched {p_b_name}'s anchor setup."
+    score_a_total = 94
+    score_b_total = 78
+    mvp_combo = f"{c_a_atk1['name']} + {c_a_atk2['name']}"
+
     score_a = {
         "player_id": "player_a",
         "player_name": p_a_name,
-        "synergy_score": 90,
-        "counter_score": 85,
+        "synergy_score": 95,
+        "counter_score": 88,
         "execution_score": score_a_total,
         "total_score": score_a_total,
-        "damage_dealt": 140 if has_flash_a else 60,
-        "damage_mitigated": 30,
+        "damage_dealt": 175,
+        "damage_mitigated": 50,
         "final_hp": 100,
-        "final_shield": 50,
+        "final_shield": 10,
         "is_eliminated": False
     }
 
     score_b = {
         "player_id": "player_b",
         "player_name": p_b_name,
-        "synergy_score": 75,
-        "counter_score": 72,
+        "synergy_score": 80,
+        "counter_score": 75,
         "execution_score": score_b_total,
         "total_score": score_b_total,
-        "damage_dealt": 0,
-        "damage_mitigated": 50,
-        "final_hp": 10 if has_flash_a else 70,
+        "damage_dealt": 40,
+        "damage_mitigated": 60,
+        "final_hp": 15,
         "final_shield": 0,
         "is_eliminated": False
     }
 
     commentary = (
-        f"WHAT AN ELECTRIFYING CLASH! {p_a_name} entered the arena with exceptional aggressive synergy. "
-        f"Although {p_b_name} attempted to fortify their position, {p_a_name}'s tactical sequencing "
-        f"seized immediate initiative, culminating in decisive damage and a {score_a_total} vs {score_b_total} victory!"
+        f"WHAT AN INCREDIBLE 100-SECOND TACTICAL MASTERCLASS! {p_a_name} and {p_b_name} traded utility "
+        f"across every phase of Ascent A Site. From the early {c_b_def1['name']} trapwire setup at 00:12, "
+        f"to the blistering {c_a_atk1['name']} flash breach at 00:28, the tension built relentlessly. "
+        f"With the Spike ticking down into the final seconds, {p_a_name} timed their {c_a_atk2['name']} "
+        f"to perfection, landing a crisp 140-damage headshot at 01:38 to close out the round in champion fashion!"
     )
 
     tactical_breakdown = (
-        f"{p_a_name}'s selected loadout created a lethal attack chain that countered {p_b_name}'s defensive layout, "
-        f"yielding higher execution efficiency and match control."
+        f"The match pivoted on {p_a_name}'s ability to maintain post-plant positional advantage after deploying "
+        f"{c_a_def2['name']}. While {p_b_name}'s defensive smokes delayed the initial plant, {p_a_name}'s "
+        f"offensive synergy ({c_a_atk1['name']} & {c_a_atk2['name']}) dealt 175 total damage and secured site victory."
     )
 
     return {

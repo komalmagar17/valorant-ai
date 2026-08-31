@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Veer Survivor — Admin Command Center</title>
+  <meta name="description" content="Admin Tournament Command Center for 3-AI Combat Sequencing and API Key Management.">
+
+  <!-- Google Fonts: Anton, JetBrains Mono, Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@400..800&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body class="admin-body">
+
+  <!-- Custom Crosshair Cursor -->
+  <div class="custom-cursor" id="customCursor"></div>
+
+  <!-- Ambient Glows -->
+  <div class="ambient-glow glow-cyan"></div>
+  <div class="ambient-glow glow-fire"></div>
+
+  <!-- Admin Navbar -->
+  <header class="navbar">
+    <div class="nav-container">
+      <div class="logo">
+        <a href="index.html" class="logo-link">
+          <div class="logo-orb" style="background: rgba(255, 70, 85, 0.2); border-color: #ff4655;">
+            <i data-lucide="shield-alert" style="color: #ff4655;"></i>
+          </div>
+          <span class="logo-text">ADMIN<span>COMMAND</span></span>
+        </a>
+      </div>
+
+      <div class="nav-actions">
+        <a href="arena.html" class="btn btn-secondary btn-sm">
+          <i data-lucide="crosshair"></i> Player Arena
+        </a>
+        <button class="btn btn-secondary btn-sm" id="btnAdminPasscode" title="Configure or update Admin Passcode">
+          <i data-lucide="key-round"></i> Admin Auth
+        </button>
+        <button class="btn btn-primary btn-sm" id="btnRefreshAll">
+          <i data-lucide="refresh-cw"></i> Refresh Roster
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <main class="admin-wrapper">
+
+    <!-- HERO / STATUS METRICS -->
+    <div class="admin-hero">
+      <div class="admin-title-row">
+        <div>
+          <h1 class="admin-heading">TOURNAMENT <span>MATCHMAKER</span></h1>
+          <p class="admin-subheading">Admin combat sequencing, deterministic matchmaking & 3-AI engine orchestration.</p>
+        </div>
+        <div class="admin-status-pill">
+          <span class="pulse-dot"></span>
+          <span>System Online • Port 8000</span>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Bar -->
+      <div class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+        <div class="metric-card">
+          <div class="metric-icon cyan"><i data-lucide="users"></i></div>
+          <div class="metric-data">
+            <span class="metric-num" id="statQueuedPlayers">0</span>
+            <span class="metric-lbl">Queued Players</span>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon purple" style="background: rgba(168, 85, 247, 0.15); color: #c084fc;"><i data-lucide="award"></i></div>
+          <div class="metric-data">
+            <span class="metric-num" id="statRegisteredPlayers">0</span>
+            <span class="metric-lbl">Registered Agents</span>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon red"><i data-lucide="swords"></i></div>
+          <div class="metric-data">
+            <span class="metric-num" id="statCompletedMatches">0</span>
+            <span class="metric-lbl">Adjudicated Matches</span>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon yellow"><i data-lucide="key-round"></i></div>
+          <div class="metric-data">
+            <span class="metric-num" id="statConfiguredKeys">3/3</span>
+            <span class="metric-lbl">AI Models Active</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GRID LAYOUT: CONFIG & QUEUE -->
+    <div class="admin-main-grid">
+
+      <!-- COLUMN 1: 3 UNIQUE AI API KEYS CONFIG -->
+      <section class="admin-panel panel-keys">
+        <div class="panel-header">
+          <div class="panel-title">
+            <i data-lucide="key" class="icon-accent"></i>
+            <h2>3 Unique AI API Keys</h2>
+          </div>
+          <span class="panel-badge">Google Gemini API</span>
+        </div>
+        <p class="panel-hint">Configure independent, dedicated API keys for each specialized AI role in the combat pipeline.</p>
+
+        <form id="formApiKeys" class="keys-form">
+          <!-- 1. Attack AI Key -->
+          <div class="key-field-group">
+            <div class="key-field-header">
+              <label for="inputAttackKey">
+                <span class="ai-role-tag atk">⚔️ Attack AI (LLM A)</span>
+              </label>
+              <span class="key-status-badge" id="badgeAttackKey">Checking...</span>
+            </div>
+            <div class="key-input-wrap">
+              <input type="password" id="inputAttackKey" placeholder="Enter GEMINI_API_KEY_ATTACK or leave blank for offline mock" />
+              <button type="button" class="btn-toggle-vis" data-target="inputAttackKey" title="Toggle visibility">
+                <i data-lucide="eye"></i>
+              </button>
+            </div>
+            <span class="key-helper" id="previewAttackKey">Loading key status...</span>
+          </div>
+
+          <!-- 2. Defence AI Key -->
+          <div class="key-field-group">
+            <div class="key-field-header">
+              <label for="inputDefenceKey">
+                <span class="ai-role-tag def">🛡️ Defence AI (LLM B)</span>
+              </label>
+              <span class="key-status-badge" id="badgeDefenceKey">Checking...</span>
+            </div>
+            <div class="key-input-wrap">
+              <input type="password" id="inputDefenceKey" placeholder="Enter GEMINI_API_KEY_DEFENCE or leave blank for offline mock" />
+              <button type="button" class="btn-toggle-vis" data-target="inputDefenceKey" title="Toggle visibility">
+                <i data-lucide="eye"></i>
+              </button>
+            </div>
+            <span class="key-helper" id="previewDefenceKey">Loading key status...</span>
+          </div>
+
+          <!-- 3. Master Referee Key -->
+          <div class="key-field-group">
+            <div class="key-field-header">
+              <label for="inputEvalKey">
+                <span class="ai-role-tag ref">⚖️ Master Referee (LLM C)</span>
+              </label>
+              <span class="key-status-badge" id="badgeEvalKey">Checking...</span>
+            </div>
+            <div class="key-input-wrap">
+              <input type="password" id="inputEvalKey" placeholder="Enter GEMINI_API_KEY_EVALUATION or leave blank for offline mock" />
+              <button type="button" class="btn-toggle-vis" data-target="inputEvalKey" title="Toggle visibility">
+                <i data-lucide="eye"></i>
+              </button>
+            </div>
+            <span class="key-helper" id="previewEvalKey">Loading key status...</span>
+          </div>
+
+          <div class="panel-action-bar">
+            <button type="submit" class="btn btn-primary" id="btnSaveKeys">
+              <i data-lucide="save"></i> Save & Apply 3 AI Keys
+            </button>
+            <span class="save-status-msg" id="keysSavedNotice"></span>
+          </div>
+        </form>
+      </section>
+
+      <!-- COLUMN 2: QUEUED PLAYERS ROSTER -->
+      <section class="admin-panel panel-queue">
+        <div class="panel-header">
+          <div class="panel-title">
+            <i data-lucide="list-ordered" class="icon-accent"></i>
+            <h2>Web Player Queue (<span id="queueCountBadge">0</span>)</h2>
+          </div>
+          <div class="panel-header-actions">
+            <button class="btn btn-secondary btn-xs" id="btnClearQueue" title="Clear all queued submissions">
+              <i data-lucide="trash-2"></i> Clear Queue
+            </button>
+          </div>
+        </div>
+        <p class="panel-hint">Players who submitted their 4 tactics from the web are queued here without triggering random bot fights.</p>
+
+        <!-- Matchmaking Selection Bar -->
+        <div class="matchmaking-picker-bar">
+          <div class="picker-slot">
+            <label>Player A (Selected):</label>
+            <div class="selected-player-chip" id="chipPlayerA">
+              <span class="chip-placeholder">None Selected (Click below)</span>
+            </div>
+          </div>
+          <div class="vs-divider">VS</div>
+          <div class="picker-slot">
+            <label>Player B (Selected):</label>
+            <div class="selected-player-chip" id="chipPlayerB">
+              <span class="chip-placeholder">None Selected (Click below)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="matchmaking-actions">
+          <button class="btn btn-primary btn-lg btn-glow" id="btnExecuteSelectedMatch" disabled>
+            <i data-lucide="swords"></i> Execute Selected 1v1 Match
+          </button>
+          <button class="btn btn-secondary btn-lg" id="btnExecuteSequence">
+            <i data-lucide="play-circle"></i> Run Sequenced Tournament
+          </button>
+        </div>
+
+        <!-- Submissions Table / Cards List -->
+        <div class="submissions-list-wrap" id="submissionsListContainer">
+          <div class="empty-queue-msg">
+            <i data-lucide="inbox"></i>
+            <p>No players queued yet. Submissions from <a href="arena.html" target="_blank">arena.html</a> will appear here automatically.</p>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- LIVE AI COMBAT EXECUTION & COMMENTARY RESULTS SECTION -->
+    <section class="admin-panel panel-results" id="liveCombatSection">
+      <div class="panel-header">
+        <div class="panel-title">
+          <i data-lucide="activity" class="icon-accent"></i>
+          <h2>Combat Adjudication & Live Broadcast</h2>
+        </div>
+        <span class="panel-badge live" id="combatStatusBadge">Idle / Ready</span>
+      </div>
+
+      <!-- Stepper Progress Display -->
+      <div class="ai-stepper" id="aiStepper">
+        <div class="step-item" id="step1">
+          <div class="step-node">1</div>
+          <div class="step-label">⚔️ Attack AI Plans</div>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step-item" id="step2">
+          <div class="step-node">2</div>
+          <div class="step-label">🛡️ Defence AI Setups</div>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step-item" id="step3">
+          <div class="step-node">3</div>
+          <div class="step-label">⚖️ Master Referee Verdict</div>
+        </div>
+      </div>
+
+      <!-- Match Result Display -->
+      <div class="match-result-view" id="matchResultView" style="display:none;">
+        
+        <!-- Winner Banner -->
+        <div class="winner-banner">
+          <div class="trophy-orb"><i data-lucide="trophy"></i></div>
+          <div class="winner-info">
+            <span class="winner-tagline">ROUND WINNER DECLARED</span>
+            <h2 class="winner-name-text" id="resWinnerName">Champion</h2>
+            <p class="winner-reason-text" id="resWinReason">Dominant tactical execution.</p>
+          </div>
+          <div class="mvp-combo-pill">
+            <span class="pill-label">MVP TACTICAL COMBO</span>
+            <strong class="pill-val" id="resMvpCombo">Quick Peek + Flash Entry</strong>
+          </div>
+        </div>
+
+        <!-- Head-to-Head Scores -->
+        <div class="scores-comparison-grid">
+          
+          <!-- Player A Card -->
+          <div class="score-card side-a">
+            <div class="score-card-header">
+              <span class="player-role">Player A</span>
+              <h3 id="resPlayerAName">Player A</h3>
+            </div>
+            <div class="score-number-big" id="resScoreA">0</div>
+            <div class="synergy-bar-wrap">
+              <div class="synergy-bar-label">
+                <span>Tactical Synergy</span>
+                <span id="resSynergyValA">0%</span>
+              </div>
+              <div class="synergy-progress">
+                <div class="synergy-fill" id="resSynergyFillA" style="width:0%"></div>
+              </div>
+            </div>
+            <div class="loadout-mini-tags" id="resLoadoutA"></div>
+          </div>
+
+          <!-- Score VS Center Badge -->
+          <div class="score-vs-center">
+            <span>FINAL</span>
+            <div class="vs-text">VS</div>
+            <span>SCORE</span>
+          </div>
+
+          <!-- Player B Card -->
+          <div class="score-card side-b">
+            <div class="score-card-header">
+              <span class="player-role">Player B</span>
+              <h3 id="resPlayerBName">Player B</h3>
+            </div>
+            <div class="score-number-big" id="resScoreB">0</div>
+            <div class="synergy-bar-wrap">
+              <div class="synergy-bar-label">
+                <span>Tactical Synergy</span>
+                <span id="resSynergyValB">0%</span>
+              </div>
+              <div class="synergy-progress">
+                <div class="synergy-fill" id="resSynergyFillB" style="width:0%"></div>
+              </div>
+            </div>
+            <div class="loadout-mini-tags" id="resLoadoutB"></div>
+          </div>
+
+        </div>
+
+        <!-- Tactical Sequences Grid (AI Generated Sequence Breakdown) -->
+        <div class="sequences-split-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom: 20px;">
+          
+          <!-- Player A Sequences -->
+          <div class="details-box" style="background: rgba(255, 94, 0, 0.05); border: 1px solid rgba(255, 94, 0, 0.2);">
+            <div class="details-box-title" style="color: #ff5e00;">
+              <i data-lucide="swords"></i> <span id="resSeqTitleA">Player A AI Sequence</span>
+            </div>
+            <div id="resSequenceListA" style="font-family: var(--font-mono); font-size: 0.85rem; display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+              <!-- Sequence injected here -->
+            </div>
+          </div>
+
+          <!-- Player B Sequences -->
+          <div class="details-box" style="background: rgba(0, 242, 255, 0.05); border: 1px solid rgba(0, 242, 255, 0.2);">
+            <div class="details-box-title" style="color: #00f2ff;">
+              <i data-lucide="shield"></i> <span id="resSeqTitleB">Player B AI Sequence</span>
+            </div>
+            <div id="resSequenceListB" style="font-family: var(--font-mono); font-size: 0.85rem; display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+              <!-- Sequence injected here -->
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Broadcast Commentary & Combat Logs Grid -->
+        <div class="details-split-grid">
+          
+          <!-- Esports Commentary Box -->
+          <div class="details-box">
+            <div class="details-box-title">
+              <i data-lucide="radio"></i> Esports Live Commentary
+            </div>
+            <div class="commentary-scroll" id="resCommentaryText">
+              No commentary generated.
+            </div>
+          </div>
+
+          <!-- Referee Combat Log -->
+          <div class="details-box">
+            <div class="details-box-title">
+              <i data-lucide="scroll-text"></i> Master Referee Combat Log
+            </div>
+            <div class="combat-log-scroll" id="resCombatLogs">
+              <!-- Logs injected here -->
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- SECTION 4: DEDICATED PLAYER DATABASE & LEADERBOARD -->
+    <section class="admin-panel panel-players" style="margin-bottom: 30px;">
+      <div class="panel-header">
+        <div class="panel-title">
+          <i data-lucide="award" class="icon-accent" style="color: #c084fc;"></i>
+          <h2>Player Database & Leaderboard</h2>
+        </div>
+        <span class="panel-badge" id="playerCountBadge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border-color: rgba(168, 85, 247, 0.3);">0 Players</span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Agent Tag</th>
+              <th>Matches</th>
+              <th>Record (W/L/D)</th>
+              <th>Win Rate</th>
+              <th>Total Score</th>
+              <th>Last Active</th>
+            </tr>
+          </thead>
+          <tbody id="playersTableBody">
+            <tr>
+              <td colspan="7" class="text-center">Loading registered players...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION 5: MATCHES DATABASE ARCHIVE -->
+    <section class="admin-panel panel-history">
+      <div class="panel-header">
+        <div class="panel-title">
+          <i data-lucide="archive" class="icon-accent"></i>
+          <h2>Matches Database Records</h2>
+        </div>
+        <span class="panel-badge" id="historyCountBadge">0 Records</span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Match ID</th>
+              <th>Timestamp</th>
+              <th>Player A</th>
+              <th>Player B</th>
+              <th>Winner</th>
+              <th>Score</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="matchesTableBody">
+            <tr>
+              <td colspan="7" class="text-center">Loading match history...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MATCH DETAIL MODAL -->
+  <div class="modal-backdrop" id="matchDetailModal">
+    <div class="picker-modal-card match-modal-lg">
+      <div class="picker-header">
+        <div class="picker-title-group">
+          <h2 id="modalMatchTitle"><i data-lucide="file-text"></i> Match Archive Details</h2>
+          <p id="modalMatchSub">Evaluating round breakdowns</p>
+        </div>
+        <button class="btn-close-modal" id="btnCloseMatchModal">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body-scroll" id="modalMatchContent">
+        <!-- Content injected here -->
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>&copy; 2026 Veer Survivor &bull; Multi-Agent AI Tournament Orchestration &bull; 120-Card Engine</p>
+  </footer>
+
+  <script src="admin.js"></script>
+</body>
+</html>

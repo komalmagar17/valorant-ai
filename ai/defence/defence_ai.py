@@ -54,12 +54,12 @@ class DefenceAction(BaseModel):
     """
     card_id: str = Field(
         ...,
-        description="ID of the defensive card/ability being used (e.g. 'dark_cover_smoke', 'cypher_trapwire', 'heavy_shield')."
+        description="ID of the defensive card/ability being used (e.g. 'def_basic_hold', 'def_defensive_smoke')."
     )
 
     action_type: str = Field(
         default="use_ability",
-        description="Category: 'use_ability', 'deploy_smoke', 'place_trap', 'hold_angle', 'fortify_shield', or 'heal'."
+        description="Category: 'site_anchor', 'deploy_smoke', 'place_trap', 'hold_angle', 'fortify_shield', or 'retake_duel'."
     )
 
     target: str = Field(
@@ -73,9 +73,19 @@ class DefenceAction(BaseModel):
         description="Order of execution in the defensive sequence (1 = first action, 2 = second, etc.)."
     )
 
+    time_window: str = Field(
+        default="00:00 - 00:20",
+        description="Estimated match time window for this defensive phase across 1-2 minutes total (e.g. '00:00 - 00:20', '00:20 - 00:50', '00:50 - 01:20', '01:20 - 01:45')."
+    )
+
+    phase: str = Field(
+        default="Phase 1: Site Fortification & Trap Setup",
+        description="Tactical phase: 'Phase 1: Fortification & Recon', 'Phase 2: Choke Stall & Smoke', 'Phase 3: Site Anchor & Crossfire', or 'Phase 4: Retake & Clutch Duel'."
+    )
+
     reason: str = Field(
         ...,
-        description="Tactical reasoning explaining why this defensive action counters the expected threat."
+        description="Tactical reasoning explaining the defensive positioning and utility deployment across the 1-2 minute round."
     )
 
 
@@ -85,12 +95,12 @@ class DefencePlan(BaseModel):
     """
     sequence: List[DefenceAction] = Field(
         ...,
-        description="Chronological sequence of defensive counter-measures for this turn."
+        description="Chronological sequence of defensive counter-measures across the 1-2 minute round."
     )
 
     strategy_summary: str = Field(
         ...,
-        description="Overall summary of the defensive strategy and site hold."
+        description="Overall summary of the defensive strategy and site hold for the 1-2 minute round."
     )
 
 
@@ -116,8 +126,12 @@ You control the DEFENDER.
 
 YOUR OBJECTIVE:
 --------------
-Analyze the incoming attack threat, map choke points, and construct the strongest possible legal defensive counter-sequence
-using ONLY the defensive cards provided in 'AVAILABLE DEFENSIVE CARDS'.
+Construct an extended, realistic **1-2 MINUTE (~100 SECOND)** tactical defensive counter-sequence.
+Standard Valorant rounds do not end instantly in 10 seconds; your defensive plan must unfold chronologically across 4 tactical phases:
+- **Phase 1: Site Fortification & Trap Setup (00:00 - 00:20)** — Lock down default angles, prepare utility traps, and gather early audio/visual intel.
+- **Phase 2: Choke Point Delay & Smoke (00:20 - 00:50)** — Deploy smokes, stalling utility, and counter-flashes to stop attacker pushes.
+- **Phase 3: Site Anchor & Crossfire Hold (00:50 - 01:20)** — Hold off-angles, trade damage against breaching attackers, and fall back if overwhelmed.
+- **Phase 4: Retake & Clutch Duel (01:20 - 01:45)** — Coordinate late-round retake timing, isolate the attacker on post-plant, and challenge the Spike defusal.
 
 DEFENDER STATUS (You):
 ----------------------
@@ -142,9 +156,10 @@ GAME RULES:
 STRICT OPERATIONAL RULES:
 -------------------------
 1. Use ONLY card IDs provided in 'AVAILABLE DEFENSIVE CARDS'.
-2. Never invent non-existent card IDs or stats.
-3. Prioritize blocking sightlines, mitigating damage, and trapping enemy entry paths.
-4. Return ONLY valid JSON matching this schema:
+2. Construct a multi-step sequence spanning the full 1-2 minute timeframe with realistic `time_window` and `phase` fields.
+3. Never invent non-existent card IDs or stats.
+4. Prioritize blocking sightlines, mitigating damage, and trapping enemy entry paths.
+5. Return ONLY valid JSON matching this schema:
 
 {schema_json}
 """
@@ -164,7 +179,7 @@ def call_llm(
     Connects to Google's FREE Gemini API (Gemini 1.5 Flash).
     Falls back to intelligent offline defensive simulation if key is not configured.
     """
-    key = api_key or os.getenv("GEMINI_API_KEY")
+    key = api_key or os.getenv("GEMINI_API_KEY_DEFENCE") or os.getenv("GEMINI_API_KEY")
 
     if key:
         try:
@@ -192,97 +207,76 @@ def call_llm(
             return json.loads(raw_text.strip())
 
         except Exception as e:
-            print(f"\n[⚠️ GEMINI API NOTICE]: {e}")
+            print(f"\n[⚠️ DEFENCE AI (GEMINI) NOTICE]: {e}")
             print("[INFO] Falling back to built-in defensive simulator.\n")
     else:
-        print("\n[ℹ️ NOTE]: GEMINI_API_KEY not found. Using offline defensive simulator.")
-        print("          (To use live Free Gemini AI: export GEMINI_API_KEY=\"your_key_from_aistudio.google.com\")\n")
+        print("\n[ℹ️ NOTE]: GEMINI_API_KEY_DEFENCE not found. Using offline defensive simulator.")
+        print("          (To use live Defence AI: export GEMINI_API_KEY_DEFENCE=\"your_key_from_aistudio.google.com\")\n")
 
     return _generate_mock_defence_response(available_cards or [])
 
 
 def _generate_mock_defence_response(available_cards: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
-    Intelligent defensive fallback simulator.
+    Intelligent defensive fallback simulator spanning 1-2 minutes (~100 seconds).
     Uses ONLY the exact cards available in the defender's loadout.
     """
-    avail_ids = {c["id"] for c in available_cards}
+    avail_ids = {c["id"]: c for c in available_cards}
     sequence = []
     order = 1
 
-    if "dark_cover_smoke" in avail_ids:
-        sequence.append({
-            "card_id": "dark_cover_smoke",
-            "action_type": "deploy_smoke",
-            "target": "a_main_choke",
-            "order": order,
-            "reason": "Drop heavy smoke at entry choke point to obscure attacker's line of sight."
-        })
-        order += 1
+    # Phase 1: Site Fortification & Trap Setup (00:00 - 00:20)
+    lead_def = available_cards[0] if available_cards else {"id": "def_basic_hold", "name": "Basic Hold"}
+    sequence.append({
+        "card_id": lead_def["id"],
+        "action_type": "site_anchor",
+        "target": "a_site_anchor",
+        "order": order,
+        "time_window": "00:00 - 00:20",
+        "phase": "Phase 1: Site Fortification & Trap Setup",
+        "reason": f"Establish early defensive anchor and fortify primary entrance using {lead_def.get('name', lead_def['id'])}."
+    })
+    order += 1
 
-    if "cypher_trapwire" in avail_ids:
-        sequence.append({
-            "card_id": "cypher_trapwire",
-            "action_type": "place_trap",
-            "target": "a_site_entrance",
-            "order": order,
-            "reason": "Anchor invisible tripwire to tether and reveal any rushing attackers."
-        })
-        order += 1
+    # Phase 2: Choke Point Delay & Smoke (00:20 - 00:50)
+    second_def = available_cards[1] if len(available_cards) > 1 else lead_def
+    sequence.append({
+        "card_id": second_def["id"],
+        "action_type": "deploy_smoke",
+        "target": "a_main_choke",
+        "order": order,
+        "time_window": "00:20 - 00:50",
+        "phase": "Phase 2: Choke Point Delay & Smoke",
+        "reason": f"Deploy {second_def.get('name', second_def['id'])} to block attacking sightlines and stall the advance."
+    })
+    order += 1
 
-    if "heavy_shield" in avail_ids:
-        sequence.append({
-            "card_id": "heavy_shield",
-            "action_type": "fortify_shield",
-            "target": "self",
-            "order": order,
-            "reason": "Fortify armor plating to absorb high incoming rifle burst damage."
-        })
-        order += 1
+    # Phase 3: Site Anchor & Crossfire Hold (00:50 - 01:20)
+    sequence.append({
+        "card_id": lead_def["id"],
+        "action_type": "hold_angle",
+        "target": "a_site",
+        "order": order,
+        "time_window": "00:50 - 01:20",
+        "phase": "Phase 3: Site Anchor & Crossfire Hold",
+        "reason": "Hold advantageous off-angle to trade damage against attackers entering the site zone."
+    })
+    order += 1
 
-    if "tailwind_dash" in avail_ids:
-        sequence.append({
-            "card_id": "tailwind_dash",
-            "action_type": "use_ability",
-            "target": "a_site",
-            "order": order,
-            "reason": "Prepare rapid repositioning dash to escape crossfire angles."
-        })
-        order += 1
-
-    if "healing_orb" in avail_ids:
-        sequence.append({
-            "card_id": "healing_orb",
-            "action_type": "heal",
-            "target": "self",
-            "order": order,
-            "reason": "Cast regenerative healing to sustain through attacker damage."
-        })
-        order += 1
-
-    # If no specific card matched, use the first available card or basic anchor
-    if not sequence:
-        if available_cards:
-            first_card = available_cards[0]
-            sequence.append({
-                "card_id": first_card["id"],
-                "action_type": "use_ability",
-                "target": "a_site",
-                "order": 1,
-                "reason": f"Deploy {first_card.get('name', first_card['id'])} defensively."
-            })
-        else:
-            sequence.append({
-                "card_id": "defensive_hold_angle",
-                "action_type": "hold_angle",
-                "target": "a_main",
-                "order": 1,
-                "reason": "Establish crosshair angle anchor behind site cover."
-            })
+    # Phase 4: Retake & Clutch Duel (01:20 - 01:45)
+    sequence.append({
+        "card_id": second_def["id"],
+        "action_type": "retake_duel",
+        "target": "player_a",
+        "order": order,
+        "time_window": "01:20 - 01:45",
+        "phase": "Phase 4: Retake & Clutch Duel",
+        "reason": f"Execute disciplined retake peek and challenge attacker in the 1v1 clutch standoff with {second_def.get('name', second_def['id'])}."
+    })
 
     return {
         "sequence": sequence,
-        "strategy_summary": "Adaptive tactical defense: Anchor site position and execute defensive utility."
+        "strategy_summary": "1-2 Minute Defensive Masterclass: Early site fortification, choke stalling utility, site crossfire engagement, and timed retake clutch execution."
     }
 
 

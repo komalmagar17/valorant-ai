@@ -107,7 +107,21 @@ python match_engine.py
 - `GET  /api/matches` — List recent database matches.
 - `GET  /api/matches/<match_id>` — Fetch detailed round evaluation for a specific match.
 
+## 🌐 Deploy to Vercel
+
+This application is 100% pre-configured and hardened for instantaneous deployment to **Vercel**:
+
+1. **Push to GitHub**:
+   Ensure all changes are committed and pushed to your repository.
+2. **Import into Vercel**:
+   Go to [vercel.com/new](https://vercel.com/new) and import your repository.
+3. **Configure Environment Variables** *(Vercel Dashboard > Project Settings > Environment Variables)*:
+   - `ADMIN_PASSWORD`: A secure passcode to protect the Admin Command Center (`/admin.html`).
+   - `GEMINI_API_KEY`: *(Optional)* Your Google Gemini API Key from [Google AI Studio](https://aistudio.google.com). (If omitted, intelligent offline tactical simulation is used).
+4. **Deploy**:
+   Click **Deploy**. Vercel will serve your static UI from its global Edge CDN and route all API calls to the serverless Python functions (`/api/*`).
+
 ---
 
 ## 📜 License
-MIT License. Built for tactical gaming and advanced AI research.
+MIT License. Created for the Tactical AI Masterclass.

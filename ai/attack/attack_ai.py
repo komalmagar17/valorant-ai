@@ -58,25 +58,21 @@ from pydantic import BaseModel, Field
 class AttackAction(BaseModel):
     """
     Represents ONE single attack or ability action chosen by the AI.
-    
-    Why use Pydantic here?
-    - If the AI returns a string for 'order' (like "first"), Pydantic will catch the bug!
-    - Enforces that card_id, target, order, and reason are always provided.
     """
 
     card_id: str = Field(
         ...,
-        description="ID of the card/weapon/ability being used (e.g. 'vandal_rifle', 'curveball_flash')."
+        description="ID of the card/weapon/ability being used (e.g. 'atk_quick_peek', 'atk_flash_entry')."
     )
 
     action_type: str = Field(
         default="attack",
-        description="Action category: 'attack', 'use_ability', 'move', or 'plant_spike'."
+        description="Action category: 'recon', 'utility_probe', 'breach', 'attack', 'plant_spike', or 'post_plant_hold'."
     )
 
     target: str = Field(
         ...,
-        description="Target of this action: enemy player ID ('player_b') or map zone ('a_site')."
+        description="Target of this action: enemy player ID ('player_b') or map zone ('a_site', 'a_main_choke')."
     )
 
     order: int = Field(
@@ -85,29 +81,35 @@ class AttackAction(BaseModel):
         description="Order of execution in the sequence (1 = first action, 2 = second, etc.)."
     )
 
+    time_window: str = Field(
+        default="00:00 - 00:20",
+        description="Estimated match time window for this tactical phase across 1-2 minutes total (e.g. '00:00 - 00:20', '00:20 - 00:50', '00:50 - 01:20', '01:20 - 01:45')."
+    )
+
+    phase: str = Field(
+        default="Phase 1: Recon & Site Approach",
+        description="Tactical phase: 'Phase 1: Recon & Site Approach', 'Phase 2: Choke Point Utility Clash', 'Phase 3: Site Breach & Spike Plant', or 'Phase 4: Post-Plant Clutch Duel'."
+    )
+
     reason: str = Field(
         ...,
-        description="Short tactical reasoning explaining why this action was selected."
+        description="Tactical reasoning explaining why this action was selected in the 1-2 minute round execution."
     )
 
 
 class AttackPlan(BaseModel):
     """
     The complete structured response returned by the Attack AI for its turn.
-    
-    Contains:
-    - sequence: Ordered list of AttackActions.
-    - strategy_summary: Overall high-level tactical objective.
     """
 
     sequence: List[AttackAction] = Field(
         ...,
-        description="Chronological sequence of tactical actions proposed for this turn."
+        description="Chronological sequence of tactical actions proposed across the 1-2 minute round."
     )
 
     strategy_summary: str = Field(
         ...,
-        description="Summary of the overall attack strategy for this turn."
+        description="Summary of the overall attack strategy for this 1-2 minute round."
     )
 
 
@@ -123,14 +125,8 @@ def build_attack_prompt(
 ) -> str:
     """
     Constructs the prompt sent to the LLM.
-
-    WHY WE DO NOT HARD-CODE CARDS:
-    ------------------------------
-    We pass the complete card database and player states into the prompt dynamically.
-    Later, you can load cards from a database or JSON file without changing this code.
     """
 
-    # Generate the exact JSON schema so the LLM knows how to format its output
     schema_json = json.dumps(AttackPlan.model_json_schema(), indent=2)
 
     prompt = f"""
@@ -139,7 +135,12 @@ You control the ATTACKER.
 
 YOUR OBJECTIVE:
 --------------
-Analyze the current match situation and construct the strongest possible legal attack sequence.
+Construct an extended, realistic **1-2 MINUTE (~100 SECOND)** tactical attack execution sequence.
+Standard Valorant rounds do not end instantly in 10 seconds; your attack plan must unfold chronologically across 4 tactical phases:
+- **Phase 1: Recon & Map Control (00:00 - 00:20)** — Gather intel, probe sightlines, avoid initial defender traps.
+- **Phase 2: Choke Point Utility Clash (00:20 - 00:50)** — Deploy flashes, fakes, or recon utility to isolate angles and force defender rotations.
+- **Phase 3: Site Breach & Spike Plant (00:50 - 01:20)** — Coordinate aggressive entry onto the site, trade utility, and secure the Spike plant.
+- **Phase 4: Post-Plant Clutch Standoff & Duel (01:20 - 01:45)** — Anchor post-plant crossfire angles and take the decisive 1v1 headshot gunfight.
 
 ATTACKER STATUS (You):
 ----------------------
@@ -160,13 +161,12 @@ GAME RULES:
 STRICT OPERATIONAL RULES:
 -------------------------
 1. Use ONLY card IDs provided in 'AVAILABLE CARDS'.
-2. Never invent non-existent card IDs or abilities.
-3. Never invent damage numbers (damage is calculated by the game engine).
-4. Do NOT modify HP directly.
-5. Do NOT decide the winner.
-6. A player can only use cards where cooldown is 0 and energy is sufficient.
-7. Sequence actions smartly (e.g. Flash utility first -> then Weapon Attack).
-8. Return ONLY valid JSON matching this schema:
+2. Construct a multi-step sequence spanning the full 1-2 minute timeframe with realistic `time_window` and `phase` fields.
+3. Never invent non-existent card IDs or abilities.
+4. Never invent damage numbers (damage is calculated by the referee).
+5. Do NOT modify HP directly.
+6. Do NOT decide the winner.
+7. Return ONLY valid JSON matching this schema:
 
 {schema_json}
 """
@@ -184,29 +184,16 @@ def call_llm(
 ) -> Dict[str, Any]:
     """
     Connects to Google's FREE Gemini API (Gemini 1.5 Flash).
-
-    HOW TO GET YOUR FREE API KEY:
-    -----------------------------
-    1. Visit https://aistudio.google.com/
-    2. Click "Get API Key" (100% free tier, generous rate limits, no credit card).
-    3. In your terminal run: export GEMINI_API_KEY="your_api_key_here"
-
-    OFFLINE FALLBACK:
-    -----------------
-    If GEMINI_API_KEY is not set, this function prints a helpful notice and uses
-    an intelligent offline tactical simulator so you can test immediately!
+    Falls back to intelligent offline tactical simulator if key is not configured.
     """
 
-    key = api_key or os.getenv("GEMINI_API_KEY")
+    key = api_key or os.getenv("GEMINI_API_KEY_ATTACK") or os.getenv("GEMINI_API_KEY")
 
     if key:
         try:
             import google.generativeai as genai
             
-            # Configure the official Google Generative AI SDK
             genai.configure(api_key=key)
-            
-            # Use 'gemini-1.5-flash' (fastest, high intelligence, completely free tier)
             model = genai.GenerativeModel(
                 model_name="gemini-1.5-flash",
                 generation_config={
@@ -218,7 +205,6 @@ def call_llm(
             response = model.generate_content(prompt)
             raw_text = response.text.strip()
 
-            # Clean markdown code fences if model returned ```json ... ```
             if raw_text.startswith("```json"):
                 raw_text = raw_text[7:]
             elif raw_text.startswith("```"):
@@ -229,78 +215,76 @@ def call_llm(
             return json.loads(raw_text.strip())
 
         except Exception as e:
-            print(f"\n[⚠️ GEMINI API NOTICE]: {e}")
+            print(f"\n[⚠️ ATTACK AI (GEMINI) NOTICE]: {e}")
             print("[INFO] Falling back to built-in tactical simulator.\n")
     else:
-        print("\n[ℹ️ NOTE]: GEMINI_API_KEY not found. Using offline tactical simulator.")
-        print("          (To use live Free Gemini AI: export GEMINI_API_KEY=\"your_key_from_aistudio.google.com\")\n")
+        print("\n[ℹ️ NOTE]: GEMINI_API_KEY_ATTACK not found. Using offline tactical simulator.")
+        print("          (To use live Attack AI: export GEMINI_API_KEY_ATTACK=\"your_key_from_aistudio.google.com\")\n")
 
     return _generate_mock_attack_response(available_cards or [])
 
 
 def _generate_mock_attack_response(available_cards: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
-    Intelligent tactical fallback simulator.
+    Intelligent tactical fallback simulator spanning 1-2 minutes (~100 seconds).
     Uses ONLY the exact cards available in the attacker's hand.
     """
     avail_ids = {c["id"]: c for c in available_cards}
     sequence = []
     order = 1
 
-    # 1. Use Utility/Flash/Shock ability first if present
-    for cid in ["curveball_flash", "shock_dart", "paranoia_blind"]:
-        if cid in avail_ids:
-            card = avail_ids[cid]
-            sequence.append({
-                "card_id": cid,
-                "action_type": "use_ability",
-                "target": "a_site",
-                "order": order,
-                "reason": f"Deploy {card.get('name', cid)} to disrupt enemy positions on site."
-            })
-            order += 1
-            break
+    # Phase 1: Recon & Map Control (00:00 - 00:20)
+    lead_card = available_cards[0] if available_cards else {"id": "atk_quick_peek", "name": "Quick Peek"}
+    sequence.append({
+        "card_id": lead_card["id"],
+        "action_type": "recon",
+        "target": "a_main_choke",
+        "order": order,
+        "time_window": "00:00 - 00:20",
+        "phase": "Phase 1: Recon & Site Approach",
+        "reason": f"Probe defensive posture and clear default angles using {lead_card.get('name', lead_card['id'])}."
+    })
+    order += 1
 
-    # 2. Use Primary Weapon Attack
-    weapon_found = False
-    for cid in ["vandal_rifle", "phantom_rifle", "blade_storm"]:
-        if cid in avail_ids:
-            card = avail_ids[cid]
-            sequence.append({
-                "card_id": cid,
-                "action_type": "attack",
-                "target": "player_b",
-                "order": order,
-                "reason": f"Engage target using {card.get('name', cid)} with optimal crosshair placement."
-            })
-            order += 1
-            weapon_found = True
-            break
+    # Phase 2: Choke Point Utility Clash (00:20 - 00:50)
+    second_card = available_cards[1] if len(available_cards) > 1 else lead_card
+    sequence.append({
+        "card_id": second_card["id"],
+        "action_type": "use_ability",
+        "target": "a_site",
+        "order": order,
+        "time_window": "00:20 - 00:50",
+        "phase": "Phase 2: Choke Point Utility Clash",
+        "reason": f"Deploy {second_card.get('name', second_card['id'])} to disrupt anchor sightlines and isolate entry angles."
+    })
+    order += 1
 
-    # If no recognized combo, sequence remaining available cards
-    if not sequence:
-        for card in available_cards:
-            sequence.append({
-                "card_id": card["id"],
-                "action_type": "attack" if card.get("type") == "damage" else "use_ability",
-                "target": "player_b",
-                "order": order,
-                "reason": f"Execute action with {card.get('name', card['id'])}."
-            })
-            order += 1
+    # Phase 3: Site Breach & Spike Plant (00:50 - 01:20)
+    sequence.append({
+        "card_id": lead_card["id"],
+        "action_type": "plant_spike",
+        "target": "a_site_default",
+        "order": order,
+        "time_window": "00:50 - 01:20",
+        "phase": "Phase 3: Site Breach & Spike Plant",
+        "reason": "Breach through the choke point into default territory and initiate Spike plant under cover."
+    })
+    order += 1
 
-    if not sequence:
-        sequence.append({
-            "card_id": "classic_sidearm",
-            "action_type": "attack",
-            "target": "player_b",
-            "order": 1,
-            "reason": "Engage target with standard sidearm."
-        })
+    # Phase 4: Post-Plant Clutch Standoff & Duel (01:20 - 01:45)
+    sequence.append({
+        "card_id": second_card["id"],
+        "action_type": "attack",
+        "target": "player_b",
+        "order": order,
+        "time_window": "01:20 - 01:45",
+        "phase": "Phase 4: Post-Plant Clutch Duel",
+        "reason": f"Lock down post-plant crossfire and engage defending defuser with decisive {second_card.get('name', second_card['id'])} engagement."
+    })
 
     return {
         "sequence": sequence,
-        "strategy_summary": "High-IQ tactical entry: Lead with tactical utility before executing lethal weapon duel."
+        "strategy_summary": "1-2 Minute Methodical Attack: Early recon probing, utility choke disruption, default spike plant, and disciplined post-plant clutch hold."
     }
 
 

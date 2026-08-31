@@ -29,8 +29,10 @@ All inputs & outputs are strictly typed via Pydantic v2 schemas.
 """
 
 import json
+from concurrent.futures import ThreadPoolExecutor
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field, field_validator
+
 
 # Import the 3 core AI modules & 120 Card Database
 from ai.attack.attack_ai import generate_attack_plan
@@ -91,6 +93,10 @@ class MatchSimulationResult(BaseModel):
     esports_commentary: str
     tactical_breakdown: str
     mvp_combo: str
+    player_a_attack_sequence: List[Dict[str, Any]] = Field(default_factory=list)
+    player_a_defence_sequence: List[Dict[str, Any]] = Field(default_factory=list)
+    player_b_attack_sequence: List[Dict[str, Any]] = Field(default_factory=list)
+    player_b_defence_sequence: List[Dict[str, Any]] = Field(default_factory=list)
     full_evaluation: EvaluationOutcome
 
 
@@ -111,19 +117,32 @@ def run_1v1_match(
     card_database: Optional[Dict[str, Dict[str, Any]]] = None,
     map_context: Optional[Dict[str, Any]] = None,
     game_rules: Optional[Dict[str, Any]] = None,
-    api_key: Optional[str] = None
+    api_key: Optional[str] = None,
+    attack_api_key: Optional[str] = None,
+    defence_api_key: Optional[str] = None,
+    evaluation_api_key: Optional[str] = None
 ) -> MatchSimulationResult:
     """
     Executes a complete 1v1 tactical match:
     1. Validates all cards against the database.
-    2. Runs Attack AI & Defence AI for Player A.
-    3. Runs Attack AI & Defence AI for Player B.
-    4. Evaluates match outcome & scoring via Evaluation AI.
+    2. Runs Attack AI & Defence AI for Player A (using attack_api_key / defence_api_key).
+    3. Runs Attack AI & Defence AI for Player B (using attack_api_key / defence_api_key).
+    4. Evaluates match outcome & scoring via Evaluation AI (using evaluation_api_key).
     5. Returns unified MatchSimulationResult.
     """
     db = card_database or DEFAULT_CARD_DATABASE
     map_ctx = map_context or {"map_name": "Ascent", "location": "A Site"}
-    rules = game_rules or {"round_time_limit_sec": 45, "shield_absorption_pct": 1.0}
+    rules = game_rules or {
+        "round_time_limit_sec": 100,
+        "spike_timer_sec": 45,
+        "buy_phase_sec": 30,
+        "shield_absorption_pct": 1.0
+    }
+
+    # Resolve individual AI API keys (with fallback to unified api_key)
+    atk_key = attack_api_key or api_key
+    def_key = defence_api_key or api_key
+    eval_key = evaluation_api_key or api_key
 
     # Step 1: Validate cards exist
     def resolve_cards(card_ids: List[str], expected_cat: str) -> List[Dict[str, Any]]:
@@ -141,7 +160,7 @@ def run_1v1_match(
     p_b_atk_cards = resolve_cards(player_b_input.attack_card_ids, "attack")
     p_b_def_cards = resolve_cards(player_b_input.defence_card_ids, "defence")
 
-    # Step 2: Run Tactical AIs for Player A
+    # Step 2 & 3: Run Tactical AIs for Player A and Player B concurrently
     p_a_profile = {
         "player_id": player_a_input.player_id,
         "name": player_a_input.player_name,
@@ -151,24 +170,6 @@ def run_1v1_match(
     }
     p_b_intel_for_a = {"visible": True, "enemy_id": player_b_input.player_id, "enemy_name": player_b_input.player_name}
 
-    plan_a_atk = generate_attack_plan(
-        attacker=p_a_profile,
-        defender_intel=p_b_intel_for_a,
-        available_cards=p_a_atk_cards,
-        game_rules=rules,
-        api_key=api_key
-    )
-
-    plan_a_def = generate_defence_plan(
-        defender=p_a_profile,
-        attacker_intel=p_b_intel_for_a,
-        available_cards=p_a_def_cards,
-        map_context=map_ctx,
-        game_rules=rules,
-        api_key=api_key
-    )
-
-    # Step 3: Run Tactical AIs for Player B
     p_b_profile = {
         "player_id": player_b_input.player_id,
         "name": player_b_input.player_name,
@@ -178,22 +179,46 @@ def run_1v1_match(
     }
     p_a_intel_for_b = {"visible": True, "enemy_id": player_a_input.player_id, "enemy_name": player_a_input.player_name}
 
-    plan_b_atk = generate_attack_plan(
-        attacker=p_b_profile,
-        defender_intel=p_a_intel_for_b,
-        available_cards=p_b_atk_cards,
-        game_rules=rules,
-        api_key=api_key
-    )
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        fut_a_atk = executor.submit(
+            generate_attack_plan,
+            attacker=p_a_profile,
+            defender_intel=p_b_intel_for_a,
+            available_cards=p_a_atk_cards,
+            game_rules=rules,
+            api_key=atk_key
+        )
+        fut_a_def = executor.submit(
+            generate_defence_plan,
+            defender=p_a_profile,
+            attacker_intel=p_b_intel_for_a,
+            available_cards=p_a_def_cards,
+            map_context=map_ctx,
+            game_rules=rules,
+            api_key=def_key
+        )
+        fut_b_atk = executor.submit(
+            generate_attack_plan,
+            attacker=p_b_profile,
+            defender_intel=p_a_intel_for_b,
+            available_cards=p_b_atk_cards,
+            game_rules=rules,
+            api_key=atk_key
+        )
+        fut_b_def = executor.submit(
+            generate_defence_plan,
+            defender=p_b_profile,
+            attacker_intel=p_a_intel_for_b,
+            available_cards=p_b_def_cards,
+            map_context=map_ctx,
+            game_rules=rules,
+            api_key=def_key
+        )
 
-    plan_b_def = generate_defence_plan(
-        defender=p_b_profile,
-        attacker_intel=p_a_intel_for_b,
-        available_cards=p_b_def_cards,
-        map_context=map_ctx,
-        game_rules=rules,
-        api_key=api_key
-    )
+        plan_a_atk = fut_a_atk.result()
+        plan_a_def = fut_a_def.result()
+        plan_b_atk = fut_b_atk.result()
+        plan_b_def = fut_b_def.result()
 
     # Step 4: Run Master Evaluation AI
     eval_outcome = evaluate_1v1_match(
@@ -205,8 +230,9 @@ def run_1v1_match(
         player_b_plans={"attack": plan_b_atk.model_dump(), "defence": plan_b_def.model_dump()},
         map_context=map_ctx,
         game_rules=rules,
-        api_key=api_key
+        api_key=eval_key
     )
+
 
     return MatchSimulationResult(
         winner_id=eval_outcome.match_winner_id,
@@ -219,6 +245,10 @@ def run_1v1_match(
         esports_commentary=eval_outcome.play_by_play_commentary,
         tactical_breakdown=eval_outcome.tactical_breakdown,
         mvp_combo=eval_outcome.mvp_card_combo,
+        player_a_attack_sequence=[a.model_dump() for a in plan_a_atk.sequence],
+        player_a_defence_sequence=[a.model_dump() for a in plan_a_def.sequence],
+        player_b_attack_sequence=[a.model_dump() for a in plan_b_atk.sequence],
+        player_b_defence_sequence=[a.model_dump() for a in plan_b_def.sequence],
         full_evaluation=eval_outcome
     )
 

@@ -1,0 +1,24 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index.py" },
+    { "source": "/admin", "destination": "/public/admin.html" },
+    { "source": "/arena", "destination": "/public/arena.html" },
+    { "source": "/(.*)\\.(css|js|jpg|jpeg|png|gif|svg|ico|json|woff2|ttf)", "destination": "/public/$1.$2" },
+    { "source": "/admin.html", "destination": "/public/admin.html" },
+    { "source": "/arena.html", "destination": "/public/arena.html" },
+    { "source": "/index.html", "destination": "/public/index.html" },
+    { "source": "/", "destination": "/public/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+        { "key": "X-XSS-Protection", "value": "1; mode=block" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+      ]
+    }
+  ]
+}
