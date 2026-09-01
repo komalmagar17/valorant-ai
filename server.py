@@ -40,7 +40,7 @@ import time
 import random
 import threading
 from http.server import HTTPServer, SimpleHTTPRequestHandler
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, unquote
 from typing import Any, Dict, List, Optional
 
 from data.cards import get_public_cards, get_all_cards
@@ -259,7 +259,7 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
 
         # 5. API: Get Single Player Profile
         if parsed.path.startswith("/api/players/"):
-            uname = parsed.path.split("/api/players/")[-1]
+            uname = unquote(parsed.path.split("/api/players/")[-1])
             player = get_player_by_username(uname)
             if player:
                 return self._send_json(player)
@@ -378,11 +378,13 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                 all_cards = get_all_cards()
 
                 p_a_name = (payload.get("player_a_name") or "Agent Alpha").strip()
+                p_a_full = (payload.get("player_a_full_name") or "").strip()
                 p_a_atk = payload.get("player_a_attack_cards", [])
                 p_a_def = payload.get("player_a_defence_cards", [])
                 p_a_char = payload.get("player_a_character_id", "char_phantom_9")
 
                 p_b_name = (payload.get("player_b_name") or "Agent Omega").strip()
+                p_b_full = (payload.get("player_b_full_name") or "").strip()
                 p_b_atk = payload.get("player_b_attack_cards", [])
                 p_b_def = payload.get("player_b_defence_cards", [])
                 p_b_char = payload.get("player_b_character_id", "char_sol_vanguard")
@@ -393,17 +395,23 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                 win_reason = payload.get("win_reason", "Manual tactical adjudication by match admin.")
                 mvp_combo = payload.get("mvp_combo")
 
-                # If submission IDs provided, mark queue items as completed
+                # If submission IDs provided, mark queue items as completed and extract full_names if not set
                 sub_a_id = payload.get("submission_a_id")
                 sub_b_id = payload.get("submission_b_id")
                 if sub_a_id:
+                    sub_a = get_submission_by_id(sub_a_id)
+                    if sub_a and not p_a_full:
+                        p_a_full = sub_a.get("full_name", "")
                     update_submission_status(sub_a_id, "completed")
                 if sub_b_id:
+                    sub_b = get_submission_by_id(sub_b_id)
+                    if sub_b and not p_b_full:
+                        p_b_full = sub_b.get("full_name", "")
                     update_submission_status(sub_b_id, "completed")
 
                 # Ensure players exist in registry
-                register_player(p_a_name)
-                register_player(p_b_name)
+                register_player(p_a_name, p_a_full)
+                register_player(p_b_name, p_b_full)
 
                 # Create match record
                 match_rec = create_match_record(
@@ -413,7 +421,9 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                     player_b_name=p_b_name,
                     player_b_attack_cards=p_b_atk,
                     player_b_defence_cards=p_b_def,
-                    status="completed"
+                    status="completed",
+                    player_a_full_name=p_a_full,
+                    player_b_full_name=p_b_full
                 )
                 match_id = match_rec["match_id"]
 
@@ -483,9 +493,10 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
 
                 payload = self._read_body_json()
                 username = payload.get("username", "").strip()
+                full_name = payload.get("full_name", "").strip()
                 if not username:
                     return self._send_json({"error": "Username cannot be empty"}, status=400)
-                player_rec = register_player(username)
+                player_rec = register_player(username, full_name)
                 return self._send_json({
                     "status": "success",
                     "message": "Player registered successfully",
@@ -506,6 +517,7 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                 payload = self._read_body_json()
 
                 player_name = payload.get("player_name", "").strip() or "Agent Alpha"
+                full_name = payload.get("full_name", "").strip()
                 attack_cards = payload.get("attack_cards", [])
                 defence_cards = payload.get("defence_cards", [])
 
@@ -528,11 +540,12 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                         }, status=400)
 
                 # Ensure player exists in dedicated Player Database
-                register_player(player_name)
+                register_player(player_name, full_name)
 
                 # Persist to database submissions queue (Status: queued)
                 db_record = save_player_submission(
                     player_name=player_name,
+                    full_name=full_name,
                     attack_card_ids=attack_cards,
                     defence_card_ids=defence_cards,
                     status="queued"
@@ -543,6 +556,7 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                     "message": "Tactical loadout registered in queue! Waiting for Admin to trigger combat sequence.",
                     "submission_id": db_record["submission_id"],
                     "player_name": player_name,
+                    "full_name": full_name,
                     "submitted_cards": {
                         "attack": attack_cards,
                         "defence": defence_cards
@@ -565,6 +579,7 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                 all_cards = get_all_cards()
 
                 player_name = payload.get("player_name", "").strip() or "Agent Alpha"
+                full_name = payload.get("full_name", "").strip()
                 attack_cards = payload.get("attack_cards", [])
                 defence_cards = payload.get("defence_cards", [])
 
@@ -581,6 +596,7 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
 
                 # Opponent loadout
                 opp_name = payload.get("opponent_name", "").strip()
+                opp_full = payload.get("opponent_full_name", "").strip()
                 opp_atk = payload.get("opponent_attack_cards", [])
                 opp_def = payload.get("opponent_defence_cards", [])
 
@@ -589,26 +605,30 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                     if queued:
                         rival_sub = random.choice(queued)
                         opp_name = rival_sub["player_name"]
+                        opp_full = rival_sub.get("full_name", "")
                         opp_atk = rival_sub["attack_cards"]
                         opp_def = rival_sub["defence_cards"]
                     else:
                         rival_names = ["Derke#FNTC", "Chronicle#EMEA", "Boaster#IGL", "Yay#DIABLO", "Aspas#LEV", "ScreaM#ONE", "cNed#FUT"]
                         opp_name = random.choice(rival_names)
+                        opp_full = opp_name.split("#")[0]
                         atk_pool = [c["id"] for c in all_cards.values() if c["category"] == "attack" and c["id"] not in attack_cards]
                         def_pool = [c["id"] for c in all_cards.values() if c["category"] == "defence" and c["id"] not in defence_cards]
                         opp_atk = random.sample(atk_pool, 2)
                         opp_def = random.sample(def_pool, 2)
 
                 # Register both players
-                register_player(player_name)
-                register_player(opp_name)
+                register_player(player_name, full_name)
+                register_player(opp_name, opp_full)
 
                 # Create match record
                 match_rec = create_match_record(
                     player_a_name=player_name,
+                    player_a_full_name=full_name,
                     player_a_attack_cards=attack_cards,
                     player_a_defence_cards=defence_cards,
                     player_b_name=opp_name,
+                    player_b_full_name=opp_full,
                     player_b_attack_cards=opp_atk,
                     player_b_defence_cards=opp_def,
                     status="in_progress"
@@ -707,10 +727,12 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                 sub_b_id = payload.get("submission_b_id")
 
                 p_a_name = payload.get("player_a_name")
+                p_a_full = payload.get("player_a_full_name", "")
                 p_a_atk = payload.get("player_a_attack_cards")
                 p_a_def = payload.get("player_a_defence_cards")
 
                 p_b_name = payload.get("player_b_name")
+                p_b_full = payload.get("player_b_full_name", "")
                 p_b_atk = payload.get("player_b_attack_cards")
                 p_b_def = payload.get("player_b_defence_cards")
 
@@ -719,6 +741,7 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                     if not sub_a:
                         return self._send_json({"error": f"Submission A '{sub_a_id}' not found"}, status=404)
                     p_a_name = sub_a["player_name"]
+                    p_a_full = sub_a.get("full_name", "")
                     p_a_atk = sub_a["attack_cards"]
                     p_a_def = sub_a["defence_cards"]
                     update_submission_status(sub_a_id, "matched")
@@ -728,6 +751,7 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                     if not sub_b:
                         return self._send_json({"error": f"Submission B '{sub_b_id}' not found"}, status=404)
                     p_b_name = sub_b["player_name"]
+                    p_b_full = sub_b.get("full_name", "")
                     p_b_atk = sub_b["attack_cards"]
                     p_b_def = sub_b["defence_cards"]
                     update_submission_status(sub_b_id, "matched")
@@ -743,11 +767,16 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                 p_b_atk = p_b_atk or random.sample(atk_pool, 2)
                 p_b_def = p_b_def or random.sample(def_pool, 2)
 
+                register_player(p_a_name, p_a_full)
+                register_player(p_b_name, p_b_full)
+
                 match_rec = create_match_record(
                     player_a_name=p_a_name,
+                    player_a_full_name=p_a_full,
                     player_a_attack_cards=p_a_atk,
                     player_a_defence_cards=p_a_def,
                     player_b_name=p_b_name,
+                    player_b_full_name=p_b_full,
                     player_b_attack_cards=p_b_atk,
                     player_b_defence_cards=p_b_def,
                     status="in_progress"
@@ -814,9 +843,11 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
 
                     match_rec = create_match_record(
                         player_a_name=sub_a["player_name"],
+                        player_a_full_name=sub_a.get("full_name", ""),
                         player_a_attack_cards=sub_a["attack_cards"],
                         player_a_defence_cards=sub_a["defence_cards"],
                         player_b_name=sub_b["player_name"],
+                        player_b_full_name=sub_b.get("full_name", ""),
                         player_b_attack_cards=sub_b["attack_cards"],
                         player_b_defence_cards=sub_b["defence_cards"],
                         status="in_progress"

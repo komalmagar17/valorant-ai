@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (subs.length === 0) {
       submissionsTableBody.innerHTML = `
         <tr>
-          <td colspan="6" class="text-center empty-state-row">
+          <td colspan="7" class="text-center empty-state-row">
             No player submissions currently in queue. Submissions entered on <a href="arena.html" target="_blank" style="color:#00f2ff; text-decoration:underline;">arena.html</a> will appear here.
           </td>
         </tr>
@@ -212,7 +212,8 @@ document.addEventListener('DOMContentLoaded', () => {
       return `
         <tr class="${isSelA ? 'row-selected-a' : ''} ${isSelB ? 'row-selected-b' : ''}">
           <td><strong>#${idx + 1}</strong></td>
-          <td><strong style="color:#00f2ff; font-size:0.95rem;">${escapeHtml(sub.player_name)}</strong></td>
+          <td><strong style="color:#ffffff; font-size:0.95rem;">${escapeHtml(sub.full_name || '—')}</strong></td>
+          <td><strong style="color:#00f2ff; font-size:0.92rem;">${escapeHtml(sub.player_name)}</strong></td>
           <td><span class="card-pill atk">⚔️ ${escapeHtml(atkNames)}</span></td>
           <td><span class="card-pill def">🛡️ ${escapeHtml(defNames)}</span></td>
           <td style="color:var(--text-muted); font-size:0.8rem;">${escapeHtml(sub.created_at || '')}</td>
@@ -286,7 +287,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateSlotDisplay() {
     if (selectedSubA) {
-      slotNameA.textContent = selectedSubA.player_name;
+      const displayName = selectedSubA.full_name 
+        ? `${escapeHtml(selectedSubA.full_name)} (${escapeHtml(selectedSubA.player_name)})`
+        : escapeHtml(selectedSubA.player_name);
+      slotNameA.innerHTML = displayName;
       const atks = (selectedSubA.attack_cards || []).map(id => getCardName(id)).join(', ');
       const defs = (selectedSubA.defence_cards || []).map(id => getCardName(id)).join(', ');
       slotCardsA.innerHTML = `<div>⚔️ ${escapeHtml(atks)}</div><div>🛡️ ${escapeHtml(defs)}</div>`;
@@ -296,7 +300,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (selectedSubB) {
-      slotNameB.textContent = selectedSubB.player_name;
+      const displayName = selectedSubB.full_name 
+        ? `${escapeHtml(selectedSubB.full_name)} (${escapeHtml(selectedSubB.player_name)})`
+        : escapeHtml(selectedSubB.player_name);
+      slotNameB.innerHTML = displayName;
       const atks = (selectedSubB.attack_cards || []).map(id => getCardName(id)).join(', ');
       const defs = (selectedSubB.defence_cards || []).map(id => getCardName(id)).join(', ');
       slotCardsB.innerHTML = `<div>⚔️ ${escapeHtml(atks)}</div><div>🛡️ ${escapeHtml(defs)}</div>`;
@@ -326,7 +333,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const pAName = selectedSubA ? selectedSubA.player_name : 'Player A';
+    const pAFull = selectedSubA ? (selectedSubA.full_name || '') : '';
     const pBName = selectedSubB ? selectedSubB.player_name : 'Player B';
+    const pBFull = selectedSubB ? (selectedSubB.full_name || '') : '';
 
     const pAAtk = selectedSubA ? selectedSubA.attack_cards : ['atk_quick_peek', 'atk_flash_entry'];
     const pADef = selectedSubA ? selectedSubA.defence_cards : ['def_basic_hold', 'def_defensive_smoke'];
@@ -341,10 +350,12 @@ document.addEventListener('DOMContentLoaded', () => {
       submission_a_id: selectedSubA ? selectedSubA.submission_id : null,
       submission_b_id: selectedSubB ? selectedSubB.submission_id : null,
       player_a_name: pAName,
+      player_a_full_name: pAFull,
       player_a_attack_cards: pAAtk,
       player_a_defence_cards: pADef,
       player_a_character_id: selectCharA.value,
       player_b_name: pBName,
+      player_b_full_name: pBFull,
       player_b_attack_cards: pBAtk,
       player_b_defence_cards: pBDef,
       player_b_character_id: selectCharB.value,
@@ -381,7 +392,7 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('Error: ' + err.message);
     } finally {
       btnRunManualAdj.disabled = false;
-      btnRunManualAdj.innerHTML = `<i data-lucide="play"></i> Record Match & Generate Godot Sequence`;
+      btnRunManualAdj.innerHTML = `<i data-lucide="play"></i> Record Match & Generate Sequence`;
       if (window.lucide) window.lucide.createIcons();
     }
   });
@@ -397,7 +408,7 @@ document.addEventListener('DOMContentLoaded', () => {
   btnCopyGodotJson.addEventListener('click', () => {
     if (!currentGodotSequence) return;
     navigator.clipboard.writeText(JSON.stringify(currentGodotSequence, null, 2)).then(() => {
-      alert('✓ Godot Sequence JSON copied to clipboard!');
+      alert('✓ Sequence JSON copied to clipboard!');
     });
   });
 
@@ -430,7 +441,7 @@ document.addEventListener('DOMContentLoaded', () => {
         matchesTableBody.innerHTML = `
           <tr>
             <td colspan="7" class="text-center empty-state-row">
-              No matches adjudicated yet. Recorded matches will appear here.
+              No matches recorded yet. Recorded matches will appear here.
             </td>
           </tr>
         `;
@@ -439,18 +450,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
       matchesTableBody.innerHTML = storedMatches.map(m => {
         const evalData = m.evaluation || {};
-        const pAName = m.player_a ? m.player_a.name : 'Player A';
-        const pBName = m.player_b ? m.player_b.name : 'Player B';
+        const pA = m.player_a || {};
+        const pB = m.player_b || {};
+        const pAName = pA.name || 'Player A';
+        const pAFull = pA.full_name || '';
+        const pBName = pB.name || 'Player B';
+        const pBFull = pB.full_name || '';
         const winner = evalData.winner_name || (m.winner_name || 'Completed');
         const scoreA = evalData.player_a_score ? evalData.player_a_score.total_score : (m.player_a_score ?? '-');
         const scoreB = evalData.player_b_score ? evalData.player_b_score.total_score : (m.player_b_score ?? '-');
+
+        const pACell = pAFull 
+          ? `<div><strong>${escapeHtml(pAFull)}</strong></div><div style="color:#00f2ff; font-size:0.8rem; font-family:var(--font-mono);">${escapeHtml(pAName)}</div>`
+          : `<strong>${escapeHtml(pAName)}</strong>`;
+
+        const pBCell = pBFull 
+          ? `<div><strong>${escapeHtml(pBFull)}</strong></div><div style="color:#00f2ff; font-size:0.8rem; font-family:var(--font-mono);">${escapeHtml(pBName)}</div>`
+          : `<strong>${escapeHtml(pBName)}</strong>`;
 
         return `
           <tr>
             <td><code>${escapeHtml(m.match_id)}</code></td>
             <td style="color:var(--text-muted); font-size:0.82rem;">${escapeHtml(m.created_at || '')}</td>
-            <td><strong>${escapeHtml(pAName)}</strong></td>
-            <td><strong>${escapeHtml(pBName)}</strong></td>
+            <td>${pACell}</td>
+            <td>${pBCell}</td>
             <td><span class="table-winner-pill">🏆 ${escapeHtml(winner)}</span></td>
             <td><strong>${scoreA} - ${scoreB}</strong></td>
             <td>
@@ -488,7 +511,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // ==========================================================================
-  // 5. REAL REGISTERED PLAYERS
+  // 5. REAL REGISTERED PLAYERS DIRECTORY
   // ==========================================================================
   async function loadPlayers() {
     try {
@@ -502,7 +525,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (registeredPlayers.length === 0) {
         playersTableBody.innerHTML = `
           <tr>
-            <td colspan="6" class="text-center empty-state-row">
+            <td colspan="7" class="text-center empty-state-row">
               No registered players in database yet.
             </td>
           </tr>
@@ -512,6 +535,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       playersTableBody.innerHTML = registeredPlayers.map(p => `
         <tr>
+          <td><strong style="color:#ffffff; font-size:0.92rem;">${escapeHtml(p.full_name || '—')}</strong></td>
           <td><strong style="color:#00f2ff;">${escapeHtml(p.username)}</strong></td>
           <td>${p.matches_played}</td>
           <td><span style="color:#22c55e;">${p.wins}W</span> / <span style="color:#ef4444;">${p.losses}L</span> / <span style="color:#94a3b8;">${p.draws}D</span></td>

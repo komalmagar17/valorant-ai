@@ -113,10 +113,11 @@ class TestServerAPI(unittest.TestCase):
         self.assertIn("does not exist", err_data["error"])
 
     def test_submit_loadout_queues_without_auto_ai(self):
-        """POST /api/submit-loadout should queue the submission with status 'queued'."""
+        """POST /api/submit-loadout should queue the submission with status 'queued' and persist full_name."""
         url = f"{self.base_url}/api/submit-loadout"
         payload = {
             "player_name": "TenZ#NA1",
+            "full_name": "Tyson Ngo",
             "attack_cards": ["atk_quick_peek", "atk_flash_entry"],
             "defence_cards": ["def_basic_hold", "def_defensive_smoke"]
         }
@@ -131,6 +132,7 @@ class TestServerAPI(unittest.TestCase):
             data = json.loads(resp.read().decode("utf-8"))
             self.assertEqual(data["status"], "queued")
             self.assertIn("submission_id", data)
+            self.assertEqual(data["full_name"], "Tyson Ngo")
             sub_id = data["submission_id"]
 
         # Check GET /api/submissions
@@ -138,8 +140,9 @@ class TestServerAPI(unittest.TestCase):
         with urllib.request.urlopen(urllib.request.Request(subs_url, method="GET")) as resp:
             self.assertEqual(resp.status, 200)
             subs_data = json.loads(resp.read().decode("utf-8"))
-            found = any(s["submission_id"] == sub_id for s in subs_data["submissions"])
-            self.assertTrue(found)
+            matched_sub = next((s for s in subs_data["submissions"] if s["submission_id"] == sub_id), None)
+            self.assertIsNotNone(matched_sub)
+            self.assertEqual(matched_sub["full_name"], "Tyson Ngo")
 
     def test_admin_api_keys_endpoint(self):
         """GET & POST /api/admin/keys should configure the 3 AI API keys."""
@@ -278,7 +281,7 @@ class TestServerAPI(unittest.TestCase):
         reg_url = f"{self.base_url}/api/players/register"
         req_reg = urllib.request.Request(
             reg_url,
-            data=json.dumps({"username": uname}).encode("utf-8"),
+            data=json.dumps({"username": uname, "full_name": "Test Agent Full Name"}).encode("utf-8"),
             headers={"Content-Type": "application/json"},
             method="POST"
         )
@@ -287,6 +290,7 @@ class TestServerAPI(unittest.TestCase):
             reg_data = json.loads(resp.read().decode("utf-8"))
             self.assertEqual(reg_data["status"], "success")
             self.assertEqual(reg_data["player"]["username"], uname)
+            self.assertEqual(reg_data["player"]["full_name"], "Test Agent Full Name")
 
         # 3. Check availability again -> available: False
         with urllib.request.urlopen(req) as resp:
@@ -294,14 +298,15 @@ class TestServerAPI(unittest.TestCase):
             data = json.loads(resp.read().decode("utf-8"))
             self.assertFalse(data["available"])
 
-        # 4. GET /api/players includes this player
+        # 4. GET /api/players includes this player with full_name
         players_url = f"{self.base_url}/api/players"
         with urllib.request.urlopen(urllib.request.Request(players_url, method="GET")) as resp:
             self.assertEqual(resp.status, 200)
             p_data = json.loads(resp.read().decode("utf-8"))
             self.assertIn("players", p_data)
-            names = [p["username"] for p in p_data["players"]]
-            self.assertIn(uname, names)
+            matched_player = next((p for p in p_data["players"] if p["username"] == uname), None)
+            self.assertIsNotNone(matched_player)
+            self.assertEqual(matched_player["full_name"], "Test Agent Full Name")
 
     def test_concurrent_simultaneous_username_checks(self):
         """Simulates 50 concurrent HTTP requests checking usernames simultaneously."""
@@ -451,10 +456,12 @@ class TestServerAPI(unittest.TestCase):
         url = f"{self.base_url}/api/admin/manual-adjudicate"
         payload = {
             "player_a_name": "TenZ#NA1",
+            "player_a_full_name": "Tyson Ngo",
             "player_a_attack_cards": ["atk_quick_peek", "atk_double_peek"],
             "player_a_defence_cards": ["def_basic_hold", "def_defensive_smoke"],
             "player_a_character_id": "char_phantom_9",
             "player_b_name": "Boaster#IGL",
+            "player_b_full_name": "Jake Howlett",
             "player_b_attack_cards": ["atk_split_pressure", "atk_flash_entry"],
             "player_b_defence_cards": ["def_layered_defense", "def_antirush_setup"],
             "player_b_character_id": "char_sol_vanguard",
@@ -478,7 +485,10 @@ class TestServerAPI(unittest.TestCase):
             self.assertIn("match", data)
             self.assertIn("godot_sequence", data)
             
-            match_id = data["match"]["match_id"]
+            match_data = data["match"]
+            self.assertEqual(match_data["player_a"]["full_name"], "Tyson Ngo")
+            self.assertEqual(match_data["player_b"]["full_name"], "Jake Howlett")
+            match_id = match_data["match_id"]
             godot_seq = data["godot_sequence"]
             self.assertEqual(godot_seq["winner_id"], "player_a")
             self.assertEqual(godot_seq["player_a_score"], 13)

@@ -28,6 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // DOM Elements
+  const fullNameInput = document.getElementById('fullNameInput');
+  const fullNameValidationMsg = document.getElementById('fullNameValidationMsg');
   const uniqueUsernameInput = document.getElementById('uniqueUsernameInput');
   const btnRandomizeName = document.getElementById('btnRandomizeName');
   const userValidationMsg = document.getElementById('userValidationMsg');
@@ -76,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================================================
-  // SECTION 1: UNIQUE USERNAME MANAGEMENT
+  // SECTION 1: PLAYER FULL NAME & UNIQUE USERNAME MANAGEMENT
   // ==========================================================================
   const RANDOM_NAMES = [
     "TenZ#NA1", "Chronicle#EMEA", "Derke#FNTC", "Aspas#LEV",
@@ -85,7 +87,16 @@ document.addEventListener('DOMContentLoaded', () => {
     "Agent-Radiant-7", "GhostWalker#99", "VandalKing#01", "PhantomQueen#42"
   ];
 
-  function loadSavedUsername() {
+  function loadSavedUserData() {
+    const savedFull = localStorage.getItem('valorant_player_full_name');
+    if (savedFull && savedFull.trim() && fullNameInput) {
+      fullNameInput.value = savedFull.trim();
+      if (fullNameValidationMsg) {
+        fullNameValidationMsg.textContent = '✓ Ready';
+        fullNameValidationMsg.style.color = '#00f2ff';
+      }
+    }
+
     const saved = localStorage.getItem('valorant_agent_unique_name');
     if (saved && saved.trim()) {
       uniqueUsernameInput.value = saved.trim();
@@ -105,6 +116,25 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   btnRandomizeName.addEventListener('click', generateRandomUsername);
+
+  if (fullNameInput) {
+    fullNameInput.addEventListener('input', () => {
+      const val = fullNameInput.value.trim();
+      if (val) {
+        localStorage.setItem('valorant_player_full_name', val);
+        if (fullNameValidationMsg) {
+          fullNameValidationMsg.textContent = '✓ Ready';
+          fullNameValidationMsg.style.color = '#00f2ff';
+        }
+      } else {
+        if (fullNameValidationMsg) {
+          fullNameValidationMsg.textContent = '⚠️ Full name required';
+          fullNameValidationMsg.style.color = '#ff5e00';
+        }
+      }
+      validateForm();
+    });
+  }
 
   uniqueUsernameInput.addEventListener('input', () => {
     const val = uniqueUsernameInput.value.trim();
@@ -377,8 +407,9 @@ document.addEventListener('DOMContentLoaded', () => {
       defCounterBadge.classList.remove('ready');
     }
 
-    const hasUsername = Boolean(uniqueUsernameInput.value.trim());
-    const isComplete = (totalAtk === 2 && totalDef === 2 && hasUsername);
+    const hasFullName = Boolean(fullNameInput && fullNameInput.value.trim());
+    const hasUsername = Boolean(uniqueUsernameInput && uniqueUsernameInput.value.trim());
+    const isComplete = (totalAtk === 2 && totalDef === 2 && hasFullName && hasUsername);
 
     btnSubmitLoadout.disabled = !isComplete;
   }
@@ -430,7 +461,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const atk2 = slotsState['atk-1'];
     const def1 = slotsState['def-0'];
     const def2 = slotsState['def-1'];
+    const fullName = (fullNameInput ? fullNameInput.value.trim() : '');
     const username = (uniqueUsernameInput.value.trim() || 'Agent Alpha');
+
+    if (!fullName) {
+      alert('Please enter your Full Name!');
+      if (fullNameInput) fullNameInput.focus();
+      return;
+    }
 
     if (!atk1 || !atk2 || !def1 || !def2) {
       alert('Please fill all 4 tactical slots before submitting!');
@@ -439,6 +477,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const payload = {
       player_name: username,
+      full_name: fullName,
       attack_cards: [atk1.id, atk2.id],
       defence_cards: [def1.id, def2.id]
     };
@@ -465,8 +504,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }
 
-      loadDatabaseMatches();
-
     } catch (e) {
       console.error('[SUBMISSION ERROR]:', e);
     }
@@ -484,6 +521,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }).join(' + ');
 
     modalSubmittedSummary.innerHTML = `
+      <div><strong>👤 Full Name:</strong> <span style="color:#ffffff; font-weight:700;">${escapeHtml(payload.full_name || '—')}</span></div>
       <div><strong>🎯 Agent Tag:</strong> <span style="color:#00f2ff;">${escapeHtml(payload.player_name)}</span></div>
       <div><strong>⚔️ Attack Tactics:</strong> ${escapeHtml(atkNames)}</div>
       <div><strong>🛡️ Defence Tactics:</strong> ${escapeHtml(defNames)}</div>
@@ -512,6 +550,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize
   fetchCardDatabase().then(() => {
-    loadSavedUsername();
+    loadSavedUserData();
   });
 });

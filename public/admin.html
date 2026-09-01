@@ -92,27 +92,27 @@
     <!-- Top Summary Stats -->
     <div class="clean-stats-row">
       <div class="clean-stat-card">
-        <span class="stat-title">Real Queued Submissions</span>
+        <span class="stat-title">Queued Submissions</span>
         <span class="stat-value cyan" id="statQueuedPlayers">0</span>
       </div>
       <div class="clean-stat-card">
-        <span class="stat-title">Total Registered Players</span>
+        <span class="stat-title">Registered Players</span>
         <span class="stat-value purple" id="statRegisteredPlayers">0</span>
       </div>
       <div class="clean-stat-card">
-        <span class="stat-title">Adjudicated Matches</span>
+        <span class="stat-title">Completed Matches</span>
         <span class="stat-value red" id="statCompletedMatches">0</span>
       </div>
     </div>
 
     <!-- ======================================================================= -->
-    <!-- SECTION 1: REAL SUBMISSIONS QUEUE (FROM WEBSITE) -->
+    <!-- SECTION 1: PLAYER SUBMISSIONS QUEUE -->
     <!-- ======================================================================= -->
     <section class="admin-panel panel-clean" style="margin-top: 24px;">
       <div class="panel-header">
         <div class="panel-title">
           <i data-lucide="users" class="icon-accent"></i>
-          <h2>Real Website Player Submissions (<span id="queueCountBadge">0</span>)</h2>
+          <h2>Player Submissions Queue (<span id="queueCountBadge">0</span>)</h2>
         </div>
         <div class="panel-header-actions">
           <button class="btn btn-secondary btn-xs" id="btnClearQueue">
@@ -120,14 +120,15 @@
           </button>
         </div>
       </div>
-      <p class="panel-hint">Live submissions from players entering their 4 tactics on your website.</p>
+      <p class="panel-hint">Live loadouts submitted by players on the website.</p>
 
       <div class="table-responsive" style="margin-top: 14px;">
         <table class="admin-table">
           <thead>
             <tr>
               <th>#</th>
-              <th>Player Username</th>
+              <th>Full Name</th>
+              <th>Username</th>
               <th>Attack Tactics (2)</th>
               <th>Defence Tactics (2)</th>
               <th>Submitted Time</th>
@@ -136,7 +137,7 @@
           </thead>
           <tbody id="submissionsTableBody">
             <tr>
-              <td colspan="6" class="text-center empty-state-row">
+              <td colspan="7" class="text-center empty-state-row">
                 No submissions in queue yet. Real player loadouts from the website will appear here.
               </td>
             </tr>
@@ -152,10 +153,10 @@
       <div class="panel-header">
         <div class="panel-title">
           <i data-lucide="swords" class="icon-accent" style="color: #ff4655;"></i>
-          <h2>Match Adjudication & Godot Sequence Generator</h2>
+          <h2>Match Adjudication & Godot Exporter</h2>
         </div>
       </div>
-      <p class="panel-hint">Select two real players from the queue above, pick the winner and scores, then generate the Godot sequence.</p>
+      <p class="panel-hint">Select Player A and Player B from the queue above to record match outcome and generate the sequence.</p>
 
       <form id="formManualAdjudicate" class="clean-adj-form">
         
@@ -229,7 +230,7 @@
         <!-- Submit Button -->
         <div style="margin-top: 20px;">
           <button type="submit" class="btn btn-primary btn-lg" id="btnRunManualAdj" style="width: 100%;">
-            <i data-lucide="play"></i> Record Match & Generate Godot Sequence
+            <i data-lucide="play"></i> Record Match & Generate Sequence
           </button>
         </div>
 
@@ -244,7 +245,7 @@
           </div>
           <div class="godot-result-actions">
             <button class="btn btn-secondary btn-sm" id="btnCopyGodotJson">
-              <i data-lucide="copy"></i> Copy Godot JSON
+              <i data-lucide="copy"></i> Copy Sequence JSON
             </button>
             <button class="btn btn-primary btn-sm" id="btnDownloadGodotJson">
               <i data-lucide="download"></i> Download godot_match_sequence.json
@@ -263,13 +264,13 @@
     </section>
 
     <!-- ======================================================================= -->
-    <!-- SECTION 3: REAL MATCHES HISTORY ARCHIVE -->
+    <!-- SECTION 3: MATCH HISTORY ARCHIVE -->
     <!-- ======================================================================= -->
     <section class="admin-panel panel-clean" style="margin-top: 24px;">
       <div class="panel-header">
         <div class="panel-title">
           <i data-lucide="history" class="icon-accent"></i>
-          <h2>Real Match History Archive (<span id="historyCountBadge">0</span>)</h2>
+          <h2>Match History Archive (<span id="historyCountBadge">0</span>)</h2>
         </div>
       </div>
 
@@ -283,13 +284,13 @@
               <th>Player B</th>
               <th>Winner</th>
               <th>Final Score</th>
-              <th>Godot Sequence</th>
+              <th>Sequence</th>
             </tr>
           </thead>
           <tbody id="matchesTableBody">
             <tr>
               <td colspan="7" class="text-center empty-state-row">
-                No matches adjudicated yet. Recorded matches will appear here.
+                No matches recorded yet. Recorded matches will appear here.
               </td>
             </tr>
           </tbody>
@@ -298,13 +299,13 @@
     </section>
 
     <!-- ======================================================================= -->
-    <!-- SECTION 4: REAL REGISTERED PLAYERS LEADERBOARD -->
+    <!-- SECTION 4: REGISTERED PLAYERS DIRECTORY -->
     <!-- ======================================================================= -->
     <section class="admin-panel panel-clean" style="margin-top: 24px; margin-bottom: 60px;">
       <div class="panel-header">
         <div class="panel-title">
           <i data-lucide="award" class="icon-accent"></i>
-          <h2>Real Registered Players (<span id="playerCountBadge">0</span>)</h2>
+          <h2>Registered Players (<span id="playerCountBadge">0</span>)</h2>
         </div>
       </div>
 
@@ -312,6 +313,7 @@
         <table class="admin-table">
           <thead>
             <tr>
+              <th>Full Name</th>
               <th>Agent Username</th>
               <th>Matches Played</th>
               <th>W / L / D</th>
@@ -322,7 +324,7 @@
           </thead>
           <tbody id="playersTableBody">
             <tr>
-              <td colspan="6" class="text-center empty-state-row">
+              <td colspan="7" class="text-center empty-state-row">
                 No registered players in database yet.
               </td>
             </tr>

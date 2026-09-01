@@ -54,28 +54,50 @@
   <!-- Main Container -->
   <main class="main-wrapper">
 
-    <!-- USERNAME CONFIG -->
+    <!-- PLAYER CONFIG -->
     <section class="arena-hero">
-      <!-- Unique Username Input Section -->
+      <!-- Player Full Name & Unique Username Input Section -->
       <div class="unique-user-card">
-        <div class="user-input-group">
-          <div class="input-label-row">
-            <label for="uniqueUsernameInput">
-              <i data-lucide="user-check"></i> Unique Agent Username
-            </label>
-            <span class="unique-hint" id="userValidationMsg">✓ Ready to record</span>
+        <div class="user-inputs-grid">
+          <!-- Full Name Input -->
+          <div class="user-input-group">
+            <div class="input-label-row">
+              <label for="fullNameInput">
+                <i data-lucide="user"></i> Player Full Name
+              </label>
+              <span class="unique-hint" id="fullNameValidationMsg">Required</span>
+            </div>
+            <div class="input-field-wrap">
+              <input 
+                type="text" 
+                id="fullNameInput" 
+                placeholder="e.g. John Doe, Alex Smith" 
+                maxlength="50" 
+                autocomplete="name"
+              />
+            </div>
           </div>
-          <div class="input-field-wrap">
-            <input 
-              type="text" 
-              id="uniqueUsernameInput" 
-              placeholder="e.g. TenZ#NA1, JettGod, Radiant#7" 
-              maxlength="28" 
-              autocomplete="off"
-            />
-            <button class="btn btn-icon" id="btnRandomizeName" title="Generate random unique Agent Tag">
-              <i data-lucide="dices"></i>
-            </button>
+
+          <!-- Unique Username Input -->
+          <div class="user-input-group">
+            <div class="input-label-row">
+              <label for="uniqueUsernameInput">
+                <i data-lucide="user-check"></i> Unique Agent Username
+              </label>
+              <span class="unique-hint" id="userValidationMsg">✓ Ready to record</span>
+            </div>
+            <div class="input-field-wrap">
+              <input 
+                type="text" 
+                id="uniqueUsernameInput" 
+                placeholder="e.g. TenZ#NA1, JettGod, Radiant#7" 
+                maxlength="28" 
+                autocomplete="off"
+              />
+              <button class="btn btn-icon" id="btnRandomizeName" title="Generate random unique Agent Tag">
+                <i data-lucide="dices"></i>
+              </button>
+            </div>
           </div>
         </div>
       </div>

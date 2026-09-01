@@ -112,9 +112,11 @@ def _init_db():
                         timestamp_epoch REAL NOT NULL,
                         status TEXT NOT NULL,
                         player_a_name TEXT NOT NULL,
+                        player_a_full_name TEXT NOT NULL DEFAULT '',
                         player_a_attack_cards TEXT NOT NULL,
                         player_a_defence_cards TEXT NOT NULL,
                         player_b_name TEXT NOT NULL,
+                        player_b_full_name TEXT NOT NULL DEFAULT '',
                         evaluation_json TEXT,
                         winner_id TEXT,
                         winner_name TEXT,
@@ -135,6 +137,7 @@ def _init_db():
                         timestamp_epoch REAL NOT NULL,
                         status TEXT NOT NULL,
                         player_name TEXT NOT NULL,
+                        full_name TEXT NOT NULL DEFAULT '',
                         attack_cards TEXT NOT NULL,
                         defence_cards TEXT NOT NULL
                     );
@@ -155,6 +158,7 @@ def _init_db():
                     CREATE TABLE IF NOT EXISTS players (
                         player_id TEXT PRIMARY KEY,
                         username TEXT UNIQUE NOT NULL,
+                        full_name TEXT NOT NULL DEFAULT '',
                         created_at TEXT NOT NULL,
                         timestamp_epoch REAL NOT NULL,
                         matches_played INTEGER DEFAULT 0,
@@ -168,6 +172,19 @@ def _init_db():
                 conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_players_username_lower ON players (LOWER(username));")
                 conn.execute("CREATE INDEX IF NOT EXISTS idx_players_score ON players (total_score DESC);")
                 conn.execute("CREATE INDEX IF NOT EXISTS idx_players_active ON players (timestamp_epoch DESC);")
+
+                # Auto-migrate existing tables if full_name columns do not exist
+                def _ensure_col(table: str, col: str, col_def: str):
+                    cur = conn.cursor()
+                    cur.execute(f"PRAGMA table_info({table})")
+                    col_names = [r["name"] for r in cur.fetchall()]
+                    if col not in col_names:
+                        conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {col_def}")
+
+                _ensure_col("submissions", "full_name", "TEXT NOT NULL DEFAULT ''")
+                _ensure_col("players", "full_name", "TEXT NOT NULL DEFAULT ''")
+                _ensure_col("matches", "player_a_full_name", "TEXT NOT NULL DEFAULT ''")
+                _ensure_col("matches", "player_b_full_name", "TEXT NOT NULL DEFAULT ''")
 
             # Check for legacy matches.json and migrate if needed
             if os.path.exists(LEGACY_JSON_FILE):
@@ -243,17 +260,22 @@ def _row_to_dict(row: sqlite3.Row) -> Dict[str, Any]:
     except Exception:
         def_cards = []
 
+    p_a_full = row["player_a_full_name"] if "player_a_full_name" in row.keys() else ""
+    p_b_full = row["player_b_full_name"] if "player_b_full_name" in row.keys() else ""
+
     return {
         "match_id": row["match_id"],
         "created_at": row["created_at"],
         "status": row["status"],
         "player_a": {
             "name": row["player_a_name"],
+            "full_name": p_a_full,
             "attack_cards": atk_cards,
             "defence_cards": def_cards
         },
         "player_b": {
-            "name": row["player_b_name"]
+            "name": row["player_b_name"],
+            "full_name": p_b_full
         },
         "evaluation": eval_data
     }
@@ -304,7 +326,9 @@ def save_match_submission(
     attack_card_ids: List[str],
     defence_card_ids: List[str],
     opponent_name: str = "Tactical AI Bot",
-    status: str = "processing"
+    status: str = "processing",
+    full_name: str = "",
+    opponent_full_name: str = ""
 ) -> Dict[str, Any]:
     """
     Persists a new player match submission into SQLite.
@@ -324,12 +348,12 @@ def save_match_submission(
             conn.execute("""
                 INSERT INTO matches (
                     match_id, created_at, timestamp_epoch, status,
-                    player_a_name, player_a_attack_cards, player_a_defence_cards,
-                    player_b_name, evaluation_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)
+                    player_a_name, player_a_full_name, player_a_attack_cards, player_a_defence_cards,
+                    player_b_name, player_b_full_name, evaluation_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
             """, (
                 match_id, timestamp, now_epoch, status,
-                player_name, atk_json, def_json, opponent_name
+                player_name, full_name, atk_json, def_json, opponent_name, opponent_full_name
             ))
     except Exception as e:
         print(f"[DB ERROR] Could not save match {match_id}: {e}")
@@ -342,11 +366,13 @@ def save_match_submission(
         "status": status,
         "player_a": {
             "name": player_name,
+            "full_name": full_name,
             "attack_cards": attack_card_ids,
             "defence_cards": defence_card_ids
         },
         "player_b": {
-            "name": opponent_name
+            "name": opponent_name,
+            "full_name": opponent_full_name
         },
         "evaluation": None
     }
@@ -416,7 +442,8 @@ def save_player_submission(
     player_name: str,
     attack_card_ids: List[str],
     defence_card_ids: List[str],
-    status: str = "queued"
+    status: str = "queued",
+    full_name: str = ""
 ) -> Dict[str, Any]:
     """
     Saves a player's drafted loadout to the waiting queue in SQLite.
@@ -436,11 +463,11 @@ def save_player_submission(
             conn.execute("""
                 INSERT INTO submissions (
                     submission_id, created_at, timestamp_epoch, status,
-                    player_name, attack_cards, defence_cards
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    player_name, full_name, attack_cards, defence_cards
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 sub_id, timestamp, now_epoch, status,
-                player_name, atk_json, def_json
+                player_name, full_name, atk_json, def_json
             ))
     except Exception as e:
         print(f"[DB ERROR] Could not save submission {sub_id}: {e}")
@@ -452,6 +479,7 @@ def save_player_submission(
         "created_at": timestamp,
         "status": status,
         "player_name": player_name,
+        "full_name": full_name,
         "attack_cards": attack_card_ids,
         "defence_cards": defence_card_ids
     }
@@ -469,12 +497,15 @@ def _sub_row_to_dict(row: sqlite3.Row) -> Dict[str, Any]:
     except Exception:
         def_cards = []
 
+    full_name = row["full_name"] if "full_name" in row.keys() else ""
+
     return {
         "submission_id": row["submission_id"],
         "created_at": row["created_at"],
         "timestamp_epoch": row["timestamp_epoch"],
         "status": row["status"],
         "player_name": row["player_name"],
+        "full_name": full_name,
         "attack_cards": atk_cards,
         "defence_cards": def_cards
     }
@@ -677,7 +708,9 @@ def create_match_record(
     player_b_name: str,
     player_b_attack_cards: Optional[List[str]] = None,
     player_b_defence_cards: Optional[List[str]] = None,
-    status: str = "processing"
+    status: str = "processing",
+    player_a_full_name: str = "",
+    player_b_full_name: str = ""
 ) -> Dict[str, Any]:
     """Creates a new match record in SQLite for admin-initiated combat."""
     _init_db()
@@ -694,12 +727,13 @@ def create_match_record(
             conn.execute("""
                 INSERT INTO matches (
                     match_id, created_at, timestamp_epoch, status,
-                    player_a_name, player_a_attack_cards, player_a_defence_cards,
-                    player_b_name, evaluation_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)
+                    player_a_name, player_a_full_name, player_a_attack_cards, player_a_defence_cards,
+                    player_b_name, player_b_full_name, evaluation_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
             """, (
                 match_id, timestamp, now_epoch, status,
-                player_a_name, atk_a_json, def_a_json, player_b_name
+                player_a_name, player_a_full_name, atk_a_json, def_a_json,
+                player_b_name, player_b_full_name
             ))
     except Exception as e:
         print(f"[DB ERROR] Could not create match record {match_id}: {e}")
@@ -712,11 +746,13 @@ def create_match_record(
         "status": status,
         "player_a": {
             "name": player_a_name,
+            "full_name": player_a_full_name,
             "attack_cards": player_a_attack_cards,
             "defence_cards": player_a_defence_cards
         },
         "player_b": {
             "name": player_b_name,
+            "full_name": player_b_full_name,
             "attack_cards": player_b_attack_cards or [],
             "defence_cards": player_b_defence_cards or []
         },
@@ -730,9 +766,11 @@ def create_match_record(
 
 def _player_row_to_dict(row: sqlite3.Row) -> Dict[str, Any]:
     """Converts a player SQLite row into a dictionary."""
+    full_name = row["full_name"] if "full_name" in row.keys() else ""
     return {
         "player_id": row["player_id"],
         "username": row["username"],
+        "full_name": full_name,
         "created_at": row["created_at"],
         "timestamp_epoch": row["timestamp_epoch"],
         "matches_played": row["matches_played"],
@@ -769,12 +807,13 @@ def check_username_available(username: str) -> bool:
         conn.close()
 
 
-def register_player(username: str) -> Dict[str, Any]:
+def register_player(username: str, full_name: str = "") -> Dict[str, Any]:
     """
     Atomically registers a new player profile or retrieves an existing one.
     Thread-safe and concurrency-safe with unique constraint handling.
     """
     clean_name = username.strip() if username else "Agent Alpha"
+    clean_full = full_name.strip() if full_name else ""
     if not clean_name:
         clean_name = "Agent Alpha"
 
@@ -791,11 +830,17 @@ def register_player(username: str) -> Dict[str, Any]:
             cursor.execute("SELECT * FROM players WHERE LOWER(username) = LOWER(?) LIMIT 1", (clean_name,))
             existing = cursor.fetchone()
             if existing:
-                # Update last active timestamp
-                conn.execute(
-                    "UPDATE players SET last_active = ?, timestamp_epoch = ? WHERE player_id = ?",
-                    (now_str, now_epoch, existing["player_id"])
-                )
+                # Update last active timestamp and full_name if provided
+                if clean_full:
+                    conn.execute(
+                        "UPDATE players SET full_name = ?, last_active = ?, timestamp_epoch = ? WHERE player_id = ?",
+                        (clean_full, now_str, now_epoch, existing["player_id"])
+                    )
+                else:
+                    conn.execute(
+                        "UPDATE players SET last_active = ?, timestamp_epoch = ? WHERE player_id = ?",
+                        (now_str, now_epoch, existing["player_id"])
+                    )
                 cursor.execute("SELECT * FROM players WHERE player_id = ?", (existing["player_id"],))
                 updated = cursor.fetchone()
                 return _player_row_to_dict(updated)
@@ -803,10 +848,10 @@ def register_player(username: str) -> Dict[str, Any]:
             # Insert new player
             conn.execute("""
                 INSERT INTO players (
-                    player_id, username, created_at, timestamp_epoch,
+                    player_id, username, full_name, created_at, timestamp_epoch,
                     matches_played, wins, losses, draws, total_score, last_active
-                ) VALUES (?, ?, ?, ?, 0, 0, 0, 0, 0, ?)
-            """, (player_id, clean_name, now_str, now_epoch, now_str))
+                ) VALUES (?, ?, ?, ?, ?, 0, 0, 0, 0, 0, ?)
+            """, (player_id, clean_name, clean_full, now_str, now_epoch, now_str))
 
             cursor.execute("SELECT * FROM players WHERE player_id = ?", (player_id,))
             new_row = cursor.fetchone()
@@ -822,6 +867,7 @@ def register_player(username: str) -> Dict[str, Any]:
         return {
             "player_id": player_id,
             "username": clean_name,
+            "full_name": clean_full,
             "created_at": now_str,
             "timestamp_epoch": now_epoch,
             "matches_played": 0,

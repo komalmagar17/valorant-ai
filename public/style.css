@@ -311,14 +311,27 @@ body {
 /* Unique Username Section */
 .unique-user-card {
   width: 100%;
-  max-width: 540px;
+  max-width: 780px;
   background: var(--bg-card);
   backdrop-filter: blur(14px);
   border: 1px solid var(--border-glass);
-  padding: 18px 22px;
+  padding: 20px 24px;
   border-radius: var(--radius-md);
   margin-top: 0;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 242, 255, 0.08);
+}
+
+.user-inputs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+@media (max-width: 680px) {
+  .user-inputs-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
 }
 
 .user-input-group {
