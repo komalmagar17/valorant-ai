@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const playerCountBadge = document.getElementById('playerCountBadge');
   const historyCountBadge = document.getElementById('historyCountBadge');
   const btnRefreshAll = document.getElementById('btnRefreshAll');
+  const btnClearAllData = document.getElementById('btnClearAllData');
 
   // DOM Elements - Tables
   const submissionsTableBody = document.getElementById('submissionsTableBody');
@@ -78,47 +79,94 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================================================
-  // 1. SECURITY PASSCODE AUTHENTICATION
+  // 1. SECURITY PASSCODE AUTHENTICATION (PASSWORD GATE)
   // ==========================================================================
   function getAdminToken() {
-    return localStorage.getItem('veer_admin_token') || sessionStorage.getItem('veer_admin_token') || '';
+    return sessionStorage.getItem('valorant_admin_auth_token') || '';
   }
 
   function setAdminToken(token) {
     if (token) {
-      localStorage.setItem('veer_admin_token', token);
-      sessionStorage.setItem('veer_admin_token', token);
+      sessionStorage.setItem('valorant_admin_auth_token', token);
     } else {
-      localStorage.removeItem('veer_admin_token');
-      sessionStorage.removeItem('veer_admin_token');
+      sessionStorage.removeItem('valorant_admin_auth_token');
     }
   }
 
-  function checkSecurityGate() {
+  async function checkSecurityGate() {
     const token = getAdminToken();
-    if (token === CORRECT_PASSCODE) {
-      securityGateOverlay.style.display = 'none';
-      initializeAdminData();
-    } else {
+    if (!token) {
+      securityGateOverlay.style.display = 'flex';
+      gatePasswordInput.focus();
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/admin/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Token': token
+        },
+        body: JSON.stringify({})
+      });
+      const data = await res.json();
+      if (res.ok && data.valid) {
+        securityGateOverlay.style.display = 'none';
+        initializeAdminData();
+      } else {
+        setAdminToken('');
+        securityGateOverlay.style.display = 'flex';
+        gatePasswordInput.focus();
+      }
+    } catch (err) {
       securityGateOverlay.style.display = 'flex';
       gatePasswordInput.focus();
     }
   }
 
-  formGateAuth.addEventListener('submit', (e) => {
+  formGateAuth.addEventListener('submit', async (e) => {
     e.preventDefault();
     const entered = gatePasswordInput.value.trim();
-    if (entered === CORRECT_PASSCODE) {
-      gateErrorMsg.style.display = 'none';
-      setAdminToken(entered);
-      securityGateOverlay.style.display = 'none';
-      initializeAdminData();
-    } else {
+    if (!entered) return;
+
+    const unlockBtn = document.getElementById('btnGateUnlock');
+    if (unlockBtn) {
+      unlockBtn.disabled = true;
+      unlockBtn.textContent = 'Verifying...';
+    }
+
+    try {
+      const res = await fetch('/api/admin/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Token': entered
+        },
+        body: JSON.stringify({})
+      });
+
+      const data = await res.json();
+      if (res.ok && data.valid) {
+        gateErrorMsg.style.display = 'none';
+        setAdminToken(entered);
+        securityGateOverlay.style.display = 'none';
+        initializeAdminData();
+      } else {
+        throw new Error('Invalid passcode');
+      }
+    } catch (err) {
       gateErrorMsg.style.display = 'block';
       gatePasswordInput.classList.add('input-error-shake');
       setTimeout(() => {
         gatePasswordInput.classList.remove('input-error-shake');
       }, 500);
+      gatePasswordInput.select();
+    } finally {
+      if (unlockBtn) {
+        unlockBtn.disabled = false;
+        unlockBtn.textContent = 'Unlock Dashboard';
+      }
     }
   });
 
@@ -135,6 +183,32 @@ document.addEventListener('DOMContentLoaded', () => {
       gatePasswordInput.value = '';
       gateErrorMsg.style.display = 'none';
       gatePasswordInput.focus();
+    });
+  }
+
+  if (btnClearAllData) {
+    btnClearAllData.addEventListener('click', async () => {
+      const confirmed = confirm('⚠️ DANGER: This will permanently wipe ALL player submissions, match history, and registered players from the database.\n\nAre you sure you want to reset the admin panel to a completely clean state?');
+      if (!confirmed) return;
+
+      try {
+        const res = await adminFetch('/api/admin/clear-all-data', { method: 'POST' });
+        const data = await res.json();
+        if (res.ok && data.status === 'cleared') {
+          selectedSubA = null;
+          selectedSubB = null;
+          currentGodotSequence = null;
+          if (godotResultCard) godotResultCard.style.display = 'none';
+          loadSubmissions();
+          loadMatchesHistory();
+          loadPlayers();
+          alert('✓ All admin panel data has been completely cleared and reset.');
+        } else {
+          alert('Error: ' + (data.error || 'Failed to clear database data.'));
+        }
+      } catch (err) {
+        alert('Error clearing data: ' + err.message);
+      }
     });
   }
 

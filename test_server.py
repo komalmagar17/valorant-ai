@@ -17,17 +17,26 @@ Tests:
 import json
 import time
 import unittest
+import os
+import tempfile
 import urllib.request
 import urllib.error
 import threading
 from http.server import HTTPServer
 
+import database.db as db_module
 from server import GameRequestHandler
 
 
 class TestServerAPI(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        cls.temp_db_fd, cls.temp_db_path = tempfile.mkstemp(suffix="_test_matches.db")
+        os.close(cls.temp_db_fd)
+        cls.orig_db_file = db_module.DB_FILE
+        db_module.DB_FILE = cls.temp_db_path
+        db_module._IS_INITIALIZED = False
+
         # Start test HTTP server on an available dynamic test port (e.g., 8877)
         cls.port = 8877
         cls.server_address = ("127.0.0.1", cls.port)
@@ -41,6 +50,13 @@ class TestServerAPI(unittest.TestCase):
     def tearDownClass(cls):
         cls.httpd.shutdown()
         cls.httpd.server_close()
+        db_module.DB_FILE = cls.orig_db_file
+        db_module._IS_INITIALIZED = False
+        if os.path.exists(cls.temp_db_path):
+            try:
+                os.remove(cls.temp_db_path)
+            except Exception:
+                pass
 
     def test_get_cards_endpoint(self):
         """GET /api/cards should return 120 sanitized tactical cards."""
@@ -502,6 +518,42 @@ class TestServerAPI(unittest.TestCase):
             seq_data = json.loads(seq_resp.read().decode("utf-8"))
             self.assertEqual(seq_data["match_id"], match_id)
             self.assertIn("timeline", seq_data)
+
+    def test_admin_clear_all_data_endpoint(self):
+        """POST /api/admin/clear-all-data should wipe submissions, matches, and players."""
+        clear_url = f"{self.base_url}/api/admin/clear-all-data"
+
+        # 1. Unauthorized request -> 401
+        req_unauth = urllib.request.Request(clear_url, data=b"{}", headers={"Content-Type": "application/json"}, method="POST")
+        with self.assertRaises(urllib.error.HTTPError) as ctx:
+            urllib.request.urlopen(req_unauth)
+        self.assertEqual(ctx.exception.code, 401)
+
+        # 2. Authorized request -> 200 and wipes everything
+        req_auth = urllib.request.Request(
+            clear_url,
+            data=b"{}",
+            headers={"Content-Type": "application/json", "X-Admin-Token": "K0lst@rno.1"},
+            method="POST"
+        )
+        with urllib.request.urlopen(req_auth) as resp:
+            self.assertEqual(resp.status, 200)
+            res_data = json.loads(resp.read().decode("utf-8"))
+            self.assertEqual(res_data["status"], "cleared")
+
+        # 3. Verify submissions, matches, players are empty
+        subs_resp = urllib.request.urlopen(urllib.request.Request(f"{self.base_url}/api/submissions", method="GET"))
+        subs_data = json.loads(subs_resp.read().decode("utf-8"))
+        self.assertEqual(subs_data["count"], 0)
+
+        matches_resp = urllib.request.urlopen(urllib.request.Request(f"{self.base_url}/api/matches", method="GET"))
+        matches_data = json.loads(matches_resp.read().decode("utf-8"))
+        self.assertEqual(matches_data["count"], 0)
+
+        players_resp = urllib.request.urlopen(urllib.request.Request(f"{self.base_url}/api/players", method="GET"))
+        players_data = json.loads(players_resp.read().decode("utf-8"))
+        self.assertEqual(players_data["count"], 0)
+
 
 
 if __name__ == "__main__":

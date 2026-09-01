@@ -51,6 +51,7 @@ from database.db import (
     get_submission_by_id,
     delete_submission,
     clear_all_submissions,
+    clear_all_data,
     update_submission_status,
     get_admin_api_keys,
     save_admin_api_keys,
@@ -288,7 +289,7 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
         # 9. API: Get Matches Database
         if parsed.path == "/api/matches":
             matches = get_all_matches()
-            return self._send_json({"matches": matches})
+            return self._send_json({"count": len(matches), "matches": matches})
 
         # 10. API: Get Godot Combat Sequence for Match
         if parsed.path.startswith("/api/matches/") and parsed.path.endswith("/godot-sequence"):
@@ -677,6 +678,20 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                     return self._send_json({"error": "Unauthorized: Admin passcode required (K0lst@rno.1)"}, status=401)
                 clear_all_submissions()
                 return self._send_json({"status": "cleared", "message": "All submissions cleared."})
+            except Exception as e:
+                return self._send_json({"error": str(e)}, status=500)
+
+        # ----------------------------------------------------------------------
+        # 7. API: Clear ALL Database Data (Submissions, Matches, Players) (Admin Protected)
+        # ----------------------------------------------------------------------
+        if parsed.path == "/api/admin/clear-all-data":
+            try:
+                if not self._is_admin_authorized():
+                    return self._send_json({"error": "Unauthorized: Admin passcode required (K0lst@rno.1)"}, status=401)
+                success = clear_all_data()
+                if success:
+                    return self._send_json({"status": "cleared", "message": "All admin panel data (submissions, matches, players) has been completely wiped."})
+                return self._send_json({"error": "Failed to clear database data."}, status=500)
             except Exception as e:
                 return self._send_json({"error": str(e)}, status=500)
 

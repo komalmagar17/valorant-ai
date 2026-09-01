@@ -186,56 +186,6 @@ def _init_db():
                 _ensure_col("matches", "player_a_full_name", "TEXT NOT NULL DEFAULT ''")
                 _ensure_col("matches", "player_b_full_name", "TEXT NOT NULL DEFAULT ''")
 
-            # Check for legacy matches.json and migrate if needed
-            if os.path.exists(LEGACY_JSON_FILE):
-                try:
-                    with open(LEGACY_JSON_FILE, "r", encoding="utf-8") as f:
-                        legacy_records = json.load(f)
-                    if isinstance(legacy_records, list) and len(legacy_records) > 0:
-                        cursor = conn.cursor()
-                        cursor.execute("SELECT COUNT(*) FROM matches")
-                        count = cursor.fetchone()[0]
-                        if count == 0:
-                            with conn:
-                                for m in legacy_records:
-                                    m_id = m.get("match_id")
-                                    if not m_id:
-                                        continue
-                                    created_at = m.get("created_at", time.strftime("%Y-%m-%d %H:%M:%S"))
-                                    p_a = m.get("player_a", {})
-                                    p_b = m.get("player_b", {})
-                                    eval_data = m.get("evaluation")
-                                    eval_json = json.dumps(eval_data) if eval_data else None
-                                    winner_id = eval_data.get("winner_id") if isinstance(eval_data, dict) else None
-                                    winner_name = eval_data.get("winner_name") if isinstance(eval_data, dict) else None
-                                    p_a_score = eval_data.get("player_a_score") if isinstance(eval_data, dict) else None
-                                    p_b_score = eval_data.get("player_b_score") if isinstance(eval_data, dict) else None
-
-                                    conn.execute("""
-                                        INSERT OR IGNORE INTO matches (
-                                            match_id, created_at, timestamp_epoch, status,
-                                            player_a_name, player_a_attack_cards, player_a_defence_cards,
-                                            player_b_name, evaluation_json, winner_id, winner_name,
-                                            player_a_score, player_b_score
-                                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                                    """, (
-                                        m_id,
-                                        created_at,
-                                        time.time(),
-                                        m.get("status", "completed"),
-                                        p_a.get("name", "Player A"),
-                                        json.dumps(p_a.get("attack_cards", [])),
-                                        json.dumps(p_a.get("defence_cards", [])),
-                                        p_b.get("name", "Opponent"),
-                                        eval_json,
-                                        winner_id,
-                                        winner_name,
-                                        p_a_score,
-                                        p_b_score
-                                    ))
-                except Exception as e:
-                    print(f"[DB MIGRATION NOTICE] Legacy migration skipped: {e}")
-
             _IS_INITIALIZED = True
         finally:
             conn.close()
@@ -992,5 +942,29 @@ def record_match_for_players(
             is_draw=is_draw,
             score_earned=p_b_score_val
         )
+
+
+def clear_all_data() -> bool:
+    """Wipes all matches, queued submissions, and players from database."""
+    _init_db()
+    conn = _get_connection()
+    try:
+        with conn:
+            conn.execute("DELETE FROM matches;")
+            conn.execute("DELETE FROM submissions;")
+            conn.execute("DELETE FROM players;")
+            try:
+                conn.execute("DELETE FROM sqlite_sequence WHERE name IN ('matches', 'submissions', 'players');")
+            except Exception:
+                pass
+        with conn:
+            conn.execute("VACUUM;")
+        return True
+    except Exception as e:
+        print(f"[DB ERROR] clear_all_data failed: {e}")
+        return False
+    finally:
+        conn.close()
+
 
 
