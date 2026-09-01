@@ -1,0 +1,725 @@
+{
+  "count": 120,
+  "cards": [
+    {
+      "id": "atk_quick_peek",
+      "name": "Quick Peek",
+      "category": "attack",
+      "description": "Briefly challenge an angle to gather information and potentially tag an opponent."
+    },
+    {
+      "id": "atk_double_peek",
+      "name": "Double Peek",
+      "category": "attack",
+      "description": "Two attackers challenge the same angle together, making it harder for the defender to isolate one player."
+    },
+    {
+      "id": "atk_contact_push",
+      "name": "Contact Push",
+      "category": "attack",
+      "description": "Attackers move quietly and only commit when they reach close range."
+    },
+    {
+      "id": "atk_lane_pressure",
+      "name": "Lane Pressure",
+      "category": "attack",
+      "description": "Apply pressure to one lane without fully committing to the site."
+    },
+    {
+      "id": "atk_utility_clear",
+      "name": "Utility Clear",
+      "category": "attack",
+      "description": "Use basic utility to force an opponent away from a common position."
+    },
+    {
+      "id": "atk_choke_pressure",
+      "name": "Choke Pressure",
+      "category": "attack",
+      "description": "Occupy an important entrance and force defenders to give up space."
+    },
+    {
+      "id": "atk_slow_advance",
+      "name": "Slow Advance",
+      "category": "attack",
+      "description": "Gradually take territory while checking positions."
+    },
+    {
+      "id": "atk_angle_isolation",
+      "name": "Angle Isolation",
+      "category": "attack",
+      "description": "Use positioning or utility to reduce the number of angles that must be checked."
+    },
+    {
+      "id": "atk_fake_pressure",
+      "name": "Fake Pressure",
+      "category": "attack",
+      "description": "Make enough noise/utility to suggest an attack without fully committing."
+    },
+    {
+      "id": "atk_probe_attack",
+      "name": "Probe Attack",
+      "category": "attack",
+      "description": "Small initial attack designed primarily to discover the defensive setup."
+    },
+    {
+      "id": "atk_controlled_entry",
+      "name": "Controlled Entry",
+      "category": "attack",
+      "description": "Enter slowly with teammates covering different angles."
+    },
+    {
+      "id": "atk_side_pressure",
+      "name": "Side Pressure",
+      "category": "attack",
+      "description": "Pressure a secondary route to make the defense uncomfortable."
+    },
+    {
+      "id": "atk_early_map_control",
+      "name": "Early Map Control",
+      "category": "attack",
+      "description": "Secure a small area before attempting the main attack."
+    },
+    {
+      "id": "atk_corner_clear",
+      "name": "Corner Clear",
+      "category": "attack",
+      "description": "Systematically clear common hiding positions."
+    },
+    {
+      "id": "atk_retreatandreattack",
+      "name": "Retreat-and-Reattack",
+      "category": "attack",
+      "description": "Make a small commitment, withdraw, then attack again from another timing."
+    },
+    {
+      "id": "atk_flash_entry",
+      "name": "Flash Entry",
+      "category": "attack",
+      "description": "Use a blinding effect or distraction before entering an area."
+    },
+    {
+      "id": "atk_smoke_entry",
+      "name": "Smoke Entry",
+      "category": "attack",
+      "description": "Block important defensive sightlines before pushing."
+    },
+    {
+      "id": "atk_stun_entry",
+      "name": "Stun Entry",
+      "category": "attack",
+      "description": "Disrupt defenders before attempting to take their position."
+    },
+    {
+      "id": "atk_recon_push",
+      "name": "Recon Push",
+      "category": "attack",
+      "description": "Gather information immediately before committing to the attack."
+    },
+    {
+      "id": "atk_utility_combo",
+      "name": "Utility Combo",
+      "category": "attack",
+      "description": "Combine two pieces of utility to make the entry harder to stop."
+    },
+    {
+      "id": "atk_twolane_push",
+      "name": "Two-Lane Push",
+      "category": "attack",
+      "description": "Attack through two nearby routes simultaneously."
+    },
+    {
+      "id": "atk_delayed_push",
+      "name": "Delayed Push",
+      "category": "attack",
+      "description": "One group enters first while another group waits for the right timing."
+    },
+    {
+      "id": "atk_split_pressure",
+      "name": "Split Pressure",
+      "category": "attack",
+      "description": "Attackers divide their pressure between two routes."
+    },
+    {
+      "id": "atk_mid_pressure",
+      "name": "Mid Pressure",
+      "category": "attack",
+      "description": "Control the central route to threaten multiple areas."
+    },
+    {
+      "id": "atk_rotation_bait",
+      "name": "Rotation Bait",
+      "category": "attack",
+      "description": "Create pressure on one side to encourage defenders to rotate away."
+    },
+    {
+      "id": "atk_fake_execute",
+      "name": "Fake Execute",
+      "category": "attack",
+      "description": "Use substantial utility but intentionally delay the actual commitment."
+    },
+    {
+      "id": "atk_site_isolation",
+      "name": "Site Isolation",
+      "category": "attack",
+      "description": "Block defensive sightlines and isolate part of the site."
+    },
+    {
+      "id": "atk_crossfire_break",
+      "name": "Crossfire Break",
+      "category": "attack",
+      "description": "Coordinate movement specifically to break a defensive crossfire."
+    },
+    {
+      "id": "atk_lurk_pressure",
+      "name": "Lurk Pressure",
+      "category": "attack",
+      "description": "One player quietly pressures another area while the team creates noise elsewhere."
+    },
+    {
+      "id": "atk_timing_push",
+      "name": "Timing Push",
+      "category": "attack",
+      "description": "Wait for defensive utility or abilities to expire before committing."
+    },
+    {
+      "id": "atk_full_site_execute",
+      "name": "Full Site Execute",
+      "category": "attack",
+      "description": "Team commits together with coordinated utility and positioning."
+    },
+    {
+      "id": "atk_threelane_execute",
+      "name": "Three-Lane Execute",
+      "category": "attack",
+      "description": "Apply simultaneous pressure from three routes."
+    },
+    {
+      "id": "atk_asplit_style_execute",
+      "name": "A-Split Style Execute",
+      "category": "attack",
+      "description": "One group attacks from the main route while another attacks from a secondary route."
+    },
+    {
+      "id": "atk_bsplit_style_execute",
+      "name": "B-Split Style Execute",
+      "category": "attack",
+      "description": "Same concept as a split attack directed toward another objective area."
+    },
+    {
+      "id": "atk_midtosite_split",
+      "name": "Mid-to-Site Split",
+      "category": "attack",
+      "description": "Gain central control and use it to attack the site from multiple directions."
+    },
+    {
+      "id": "atk_flashsmoke_execute",
+      "name": "Flash-Smoke Execute",
+      "category": "attack",
+      "description": "Combine vision denial and disruption before entering."
+    },
+    {
+      "id": "atk_reconflash_execute",
+      "name": "Recon-Flash Execute",
+      "category": "attack",
+      "description": "Locate defenders and immediately disrupt their positions."
+    },
+    {
+      "id": "atk_stunsmoke_execute",
+      "name": "Stun-Smoke Execute",
+      "category": "attack",
+      "description": "Reduce defender effectiveness while blocking their vision."
+    },
+    {
+      "id": "atk_delayed_split",
+      "name": "Delayed Split",
+      "category": "attack",
+      "description": "Start an attack from one side, then introduce the second attack at an unexpected moment."
+    },
+    {
+      "id": "atk_contact_execute",
+      "name": "Contact Execute",
+      "category": "attack",
+      "description": "Minimize early noise before suddenly committing as a group."
+    },
+    {
+      "id": "atk_rotation_trap",
+      "name": "Rotation Trap",
+      "category": "attack",
+      "description": "Force defenders to rotate and then attack the space they abandoned."
+    },
+    {
+      "id": "atk_double_fake",
+      "name": "Double Fake",
+      "category": "attack",
+      "description": "Threaten two locations before committing to the actual target."
+    },
+    {
+      "id": "atk_lurk__execute",
+      "name": "Lurk + Execute",
+      "category": "attack",
+      "description": "A hidden attacker creates pressure behind the expected defensive setup."
+    },
+    {
+      "id": "atk_utility_drain",
+      "name": "Utility Drain",
+      "category": "attack",
+      "description": "Repeatedly pressure defenders until their defensive resources are reduced."
+    },
+    {
+      "id": "atk_late_execute",
+      "name": "Late Execute",
+      "category": "attack",
+      "description": "Hold the attack until defenders have fewer resources and less time to respond."
+    },
+    {
+      "id": "atk_fullteam_rush",
+      "name": "Full-Team Rush",
+      "category": "attack",
+      "description": "Almost the entire attacking team commits rapidly toward one objective."
+    },
+    {
+      "id": "atk_perfect_split",
+      "name": "Perfect Split",
+      "category": "attack",
+      "description": "Coordinated groups attack from multiple directions at nearly the same time."
+    },
+    {
+      "id": "atk_tripleside_execute",
+      "name": "Triple-Side Execute",
+      "category": "attack",
+      "description": "Pressure arrives from three separate directions simultaneously."
+    },
+    {
+      "id": "atk_full_utility_execute",
+      "name": "Full Utility Execute",
+      "category": "attack",
+      "description": "The team spends a large portion of its resources to overwhelm the defense."
+    },
+    {
+      "id": "atk_multifake_execute",
+      "name": "Multi-Fake Execute",
+      "category": "attack",
+      "description": "Several false threats are created before the actual attack."
+    },
+    {
+      "id": "atk_rotation_punish",
+      "name": "Rotation Punish",
+      "category": "attack",
+      "description": "Attackers deliberately manipulate defender rotations and immediately exploit the weak area."
+    },
+    {
+      "id": "atk_perfect_timing_attack",
+      "name": "Perfect Timing Attack",
+      "category": "attack",
+      "description": "Attack begins exactly when defensive resources are unavailable or recovering."
+    },
+    {
+      "id": "atk_information_overload",
+      "name": "Information Overload",
+      "category": "attack",
+      "description": "Multiple simultaneous threats make it difficult for defenders to determine the real attack."
+    },
+    {
+      "id": "atk_lurk__triple_push",
+      "name": "Lurk + Triple Push",
+      "category": "attack",
+      "description": "A hidden player combines with a coordinated multi-route attack."
+    },
+    {
+      "id": "atk_resource_exhaustion_execute",
+      "name": "Resource Exhaustion Execute",
+      "category": "attack",
+      "description": "Attackers deliberately drain defensive resources before making the final commitment."
+    },
+    {
+      "id": "atk_adaptive_execute",
+      "name": "Adaptive Execute",
+      "category": "attack",
+      "description": "Attack begins with one plan but changes immediately based on defensive reactions."
+    },
+    {
+      "id": "atk_full_map_pressure",
+      "name": "Full Map Pressure",
+      "category": "attack",
+      "description": "Attackers threaten multiple areas simultaneously, forcing the defense to spread out."
+    },
+    {
+      "id": "atk_counterrotation_attack",
+      "name": "Counter-Rotation Attack",
+      "category": "attack",
+      "description": "Attackers deliberately wait for defensive movement and attack during the rotation."
+    },
+    {
+      "id": "atk_timed_final_execute",
+      "name": "Timed Final Execute",
+      "category": "attack",
+      "description": "A carefully coordinated final push uses timing, positioning and remaining resources together."
+    },
+    {
+      "id": "atk_master_execute",
+      "name": "Master Execute",
+      "category": "attack",
+      "description": "A highly coordinated combination of split pressure, utility, timing and deception."
+    },
+    {
+      "id": "def_basic_hold",
+      "name": "Basic Hold",
+      "category": "defence",
+      "description": "Stay in position and defend the expected entrance."
+    },
+    {
+      "id": "def_angle_hold",
+      "name": "Angle Hold",
+      "category": "defence",
+      "description": "Maintain an advantageous angle against approaching attackers."
+    },
+    {
+      "id": "def_double_hold",
+      "name": "Double Hold",
+      "category": "defence",
+      "description": "Two defenders cover the same important area."
+    },
+    {
+      "id": "def_passive_hold",
+      "name": "Passive Hold",
+      "category": "defence",
+      "description": "Avoid unnecessary fights and preserve position."
+    },
+    {
+      "id": "def_choke_hold",
+      "name": "Choke Hold",
+      "category": "defence",
+      "description": "Defend an important entrance into the area."
+    },
+    {
+      "id": "def_early_information",
+      "name": "Early Information",
+      "category": "defence",
+      "description": "Gather information before the attackers commit."
+    },
+    {
+      "id": "def_position_change",
+      "name": "Position Change",
+      "category": "defence",
+      "description": "Change position after being spotted to avoid being predictable."
+    },
+    {
+      "id": "def_close_defense",
+      "name": "Close Defense",
+      "category": "defence",
+      "description": "Hold a position where attackers must get close before challenging."
+    },
+    {
+      "id": "def_long_defense",
+      "name": "Long Defense",
+      "category": "defence",
+      "description": "Maintain distance and make the attackers cross open space."
+    },
+    {
+      "id": "def_basic_retreat",
+      "name": "Basic Retreat",
+      "category": "defence",
+      "description": "Give up some space rather than taking an unfavorable fight."
+    },
+    {
+      "id": "def_utility_stall",
+      "name": "Utility Stall",
+      "category": "defence",
+      "description": "Use a small amount of utility to slow the attack."
+    },
+    {
+      "id": "def_crossfire_setup",
+      "name": "Crossfire Setup",
+      "category": "defence",
+      "description": "Two defenders cover each other from different angles."
+    },
+    {
+      "id": "def_trap_position",
+      "name": "Trap Position",
+      "category": "defence",
+      "description": "Place a defender or defensive resource where attackers are likely to enter."
+    },
+    {
+      "id": "def_flank_watch",
+      "name": "Flank Watch",
+      "category": "defence",
+      "description": "Keep one player watching for attackers coming from behind."
+    },
+    {
+      "id": "def_reposition_defense",
+      "name": "Reposition Defense",
+      "category": "defence",
+      "description": "Move to a different defensive location after detecting pressure."
+    },
+    {
+      "id": "def_defensive_smoke",
+      "name": "Defensive Smoke",
+      "category": "defence",
+      "description": "Block an attacking route and delay their advance."
+    },
+    {
+      "id": "def_flash_retardation",
+      "name": "Flash Retardation",
+      "category": "defence",
+      "description": "Disrupt attackers as they attempt to enter."
+    },
+    {
+      "id": "def_stun_defense",
+      "name": "Stun Defense",
+      "category": "defence",
+      "description": "Reduce attacking effectiveness before they reach the objective."
+    },
+    {
+      "id": "def_recon_defense",
+      "name": "Recon Defense",
+      "category": "defence",
+      "description": "Gather information about the attacking formation."
+    },
+    {
+      "id": "def_utility_combination",
+      "name": "Utility Combination",
+      "category": "defence",
+      "description": "Combine multiple defensive resources to stop an entry."
+    },
+    {
+      "id": "def_crossfire_defense",
+      "name": "Crossfire Defense",
+      "category": "defence",
+      "description": "Coordinate two or more defenders to punish an entry."
+    },
+    {
+      "id": "def_choke_stall",
+      "name": "Choke Stall",
+      "category": "defence",
+      "description": "Repeatedly delay attackers at an important entrance."
+    },
+    {
+      "id": "def_early_rotation",
+      "name": "Early Rotation",
+      "category": "defence",
+      "description": "Move defensive resources toward the threatened area quickly."
+    },
+    {
+      "id": "def_controlled_retreat",
+      "name": "Controlled Retreat",
+      "category": "defence",
+      "description": "Give up the first area while preparing a stronger second position."
+    },
+    {
+      "id": "def_antirush_setup",
+      "name": "Anti-Rush Setup",
+      "category": "defence",
+      "description": "Specifically prepare for a fast coordinated attack."
+    },
+    {
+      "id": "def_fake_rotation",
+      "name": "Fake Rotation",
+      "category": "defence",
+      "description": "Appear to rotate while secretly maintaining defensive coverage."
+    },
+    {
+      "id": "def_information_trap",
+      "name": "Information Trap",
+      "category": "defence",
+      "description": "Allow limited enemy movement to learn their actual plan."
+    },
+    {
+      "id": "def_mid_control",
+      "name": "Mid Control",
+      "category": "defence",
+      "description": "Maintain control over the central route to restrict attacker movement."
+    },
+    {
+      "id": "def_lurk_detection",
+      "name": "Lurk Detection",
+      "category": "defence",
+      "description": "Position resources specifically to detect hidden attackers."
+    },
+    {
+      "id": "def_timing_defense",
+      "name": "Timing Defense",
+      "category": "defence",
+      "description": "Save defensive resources until the attacker's commitment is clear."
+    },
+    {
+      "id": "def_full_site_hold",
+      "name": "Full Site Hold",
+      "category": "defence",
+      "description": "Multiple defenders coordinate to protect the objective directly."
+    },
+    {
+      "id": "def_layered_defense",
+      "name": "Layered Defense",
+      "category": "defence",
+      "description": "Defenders create several defensive positions that attackers must break through."
+    },
+    {
+      "id": "def_threepoint_defense",
+      "name": "Three-Point Defense",
+      "category": "defence",
+      "description": "Defenders cover three important approaches simultaneously."
+    },
+    {
+      "id": "def_split_defense",
+      "name": "Split Defense",
+      "category": "defence",
+      "description": "Defensive players divide between the main objective and secondary threat."
+    },
+    {
+      "id": "def_midcontrol_defense",
+      "name": "Mid-Control Defense",
+      "category": "defence",
+      "description": "Maintain central control while still protecting the objective."
+    },
+    {
+      "id": "def_utility_retake",
+      "name": "Utility Retake",
+      "category": "defence",
+      "description": "Allow limited entry and then use coordinated utility to reclaim the area."
+    },
+    {
+      "id": "def_crossfire_network",
+      "name": "Crossfire Network",
+      "category": "defence",
+      "description": "Several defenders create overlapping lines of support."
+    },
+    {
+      "id": "def_delayed_retake",
+      "name": "Delayed Retake",
+      "category": "defence",
+      "description": "Avoid immediately committing and wait for teammates before reclaiming."
+    },
+    {
+      "id": "def_rotation_trap",
+      "name": "Rotation Trap",
+      "category": "defence",
+      "description": "Attackers are allowed to commit while defenders prepare to punish their positioning."
+    },
+    {
+      "id": "def_antisplit_defense",
+      "name": "Anti-Split Defense",
+      "category": "defence",
+      "description": "Defensive positioning specifically covers multiple simultaneous entrances."
+    },
+    {
+      "id": "def_resource_conservation",
+      "name": "Resource Conservation",
+      "category": "defence",
+      "description": "Save important defensive resources for the final stage of the attack."
+    },
+    {
+      "id": "def_information_network",
+      "name": "Information Network",
+      "category": "defence",
+      "description": "Multiple information sources continuously track attacker movement."
+    },
+    {
+      "id": "def_flank_containment",
+      "name": "Flank Containment",
+      "category": "defence",
+      "description": "Prevent hidden attackers from creating an unexpected secondary threat."
+    },
+    {
+      "id": "def_retake_formation",
+      "name": "Retake Formation",
+      "category": "defence",
+      "description": "Several defenders coordinate their positions before attempting to retake."
+    },
+    {
+      "id": "def_adaptive_defense",
+      "name": "Adaptive Defense",
+      "category": "defence",
+      "description": "Defensive formation changes according to the attacker's choices."
+    },
+    {
+      "id": "def_full_antirush",
+      "name": "Full Anti-Rush",
+      "category": "defence",
+      "description": "Entire defense is prepared for an immediate coordinated attack."
+    },
+    {
+      "id": "def_perfect_crossfire",
+      "name": "Perfect Crossfire",
+      "category": "defence",
+      "description": "Multiple defenders create extremely strong overlapping coverage."
+    },
+    {
+      "id": "def_multilayer_defense",
+      "name": "Multi-Layer Defense",
+      "category": "defence",
+      "description": "Attackers must overcome several defensive layers before reaching the objective."
+    },
+    {
+      "id": "def_triplesite_coverage",
+      "name": "Triple-Site Coverage",
+      "category": "defence",
+      "description": "Defense simultaneously protects three important approaches."
+    },
+    {
+      "id": "def_full_utility_defense",
+      "name": "Full Utility Defense",
+      "category": "defence",
+      "description": "Large amounts of defensive resources are coordinated to stop the attack."
+    },
+    {
+      "id": "def_rotation_punish",
+      "name": "Rotation Punish",
+      "category": "defence",
+      "description": "Defenders deliberately allow a predictable commitment and then respond from advantageous positions."
+    },
+    {
+      "id": "def_perfect_retake",
+      "name": "Perfect Retake",
+      "category": "defence",
+      "description": "Defenders coordinate timing, positioning and utility for a unified retake."
+    },
+    {
+      "id": "def_information_lockdown",
+      "name": "Information Lockdown",
+      "category": "defence",
+      "description": "Defenders maintain extremely strong awareness of attacker movement."
+    },
+    {
+      "id": "def_antilurk_network",
+      "name": "Anti-Lurk Network",
+      "category": "defence",
+      "description": "Defensive positions specifically prevent hidden attackers from influencing the round."
+    },
+    {
+      "id": "def_resource_denial",
+      "name": "Resource Denial",
+      "category": "defence",
+      "description": "Defenders preserve key resources specifically to counter the final attack."
+    },
+    {
+      "id": "def_adaptive_fortress",
+      "name": "Adaptive Fortress",
+      "category": "defence",
+      "description": "Defensive setup constantly changes based on the attacker's behavior."
+    },
+    {
+      "id": "def_multiroute_counter",
+      "name": "Multi-Route Counter",
+      "category": "defence",
+      "description": "Defense simultaneously responds to attacks from multiple directions."
+    },
+    {
+      "id": "def_counterrotation",
+      "name": "Counter-Rotation",
+      "category": "defence",
+      "description": "Defenders deliberately manipulate their positioning to punish attacking rotations."
+    },
+    {
+      "id": "def_timed_retake",
+      "name": "Timed Retake",
+      "category": "defence",
+      "description": "The defense waits for the optimal moment and then executes a coordinated retake."
+    },
+    {
+      "id": "def_master_defense",
+      "name": "Master Defense",
+      "category": "defence",
+      "description": "A highly coordinated combination of information, positioning, utility, timing and adaptation."
+    }
+  ]
+}

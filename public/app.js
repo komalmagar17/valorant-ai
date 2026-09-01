@@ -153,13 +153,39 @@ document.addEventListener('DOMContentLoaded', () => {
   // SECTION 2: FETCH ALL 120 TACTICAL CARDS
   // ==========================================================================
   async function fetchCardDatabase() {
+    // 1. Immediate initialization from preloaded script data (100% instantaneous, 0 network lag)
+    if (window.TACTICAL_CARDS_DATA && Array.isArray(window.TACTICAL_CARDS_DATA) && window.TACTICAL_CARDS_DATA.length > 0) {
+      allCards = window.TACTICAL_CARDS_DATA;
+      console.log(`[ARENA] Instantly preloaded ${allCards.length} master tactical cards.`);
+    }
+
+    // 2. Fetch from /api/cards or static JSON fallbacks
     try {
       const res = await fetch('/api/cards');
-      const data = await res.json();
-      allCards = data.cards || [];
-      console.log(`[ARENA] Loaded ${allCards.length} master tactical cards.`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.cards && data.cards.length > 0) {
+          allCards = data.cards;
+          console.log(`[ARENA] Loaded ${allCards.length} tactical cards from /api/cards.`);
+          return;
+        }
+      }
     } catch (e) {
-      console.error('[ARENA ERROR] Failed to fetch tactical cards:', e);
+      console.warn('[ARENA] /api/cards not reachable, trying static fallback:', e);
+    }
+
+    try {
+      const res2 = await fetch('/cards.json');
+      if (res2.ok) {
+        const data2 = await res2.json();
+        if (data2.cards && data2.cards.length > 0) {
+          allCards = data2.cards;
+          console.log(`[ARENA] Loaded ${allCards.length} tactical cards from /cards.json.`);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('[ARENA] Static /cards.json fallback error:', e);
     }
   }
 

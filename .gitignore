@@ -53,3 +53,4 @@ database/*.db-shm
 *.swo
 .vercel/
 
+.vercel

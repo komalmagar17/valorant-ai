@@ -230,16 +230,41 @@ document.addEventListener('DOMContentLoaded', () => {
   // 2. REAL SUBMISSIONS QUEUE
   // ==========================================================================
   async function fetchCards() {
+    // 1. Immediate preloaded dataset
+    if (window.TACTICAL_CARDS_DATA && Array.isArray(window.TACTICAL_CARDS_DATA)) {
+      window.TACTICAL_CARDS_DATA.forEach(c => {
+        allCardsMap[c.id] = c;
+      });
+    }
+
+    // 2. Network fetch
     try {
       const res = await fetch('/api/cards');
-      const data = await res.json();
-      if (data.cards) {
-        data.cards.forEach(c => {
-          allCardsMap[c.id] = c;
-        });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.cards) {
+          data.cards.forEach(c => {
+            allCardsMap[c.id] = c;
+          });
+          return;
+        }
       }
     } catch (e) {
-      console.error('Failed to load cards:', e);
+      console.warn('Live /api/cards fetch error:', e);
+    }
+
+    try {
+      const res2 = await fetch('/cards.json');
+      if (res2.ok) {
+        const data2 = await res2.json();
+        if (data2.cards) {
+          data2.cards.forEach(c => {
+            allCardsMap[c.id] = c;
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Static /cards.json fetch error:', e);
     }
   }
 
